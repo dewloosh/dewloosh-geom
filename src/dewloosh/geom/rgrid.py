@@ -5,26 +5,26 @@ from dewloosh.geom.topo.tr import transform_topo
 __cache = True
 
 
-__all__ = ['rgrid', 'rgridQ9', 'rgridH8', 'rgridH27']
+__all__ = ['grid', 'gridQ4', 'gridQ9', 'gridH8', 'gridH27']
 
 
-def rgrid(*args, size=None, shape=None, eshape=None, origo=None, start=0,
+def grid(*args, size=None, shape=None, eshape=None, origo=None, start=0,
           bins=None, **kwargs):
     nDime = len(size)
     if eshape is None:
         eshape = np.full(nDime, 2, dtype=int)
     elif isinstance(eshape, str):
         if eshape == 'Q4':
-            return rgridQ4(*args, size=size, shape=shape, origo=origo,
+            return gridQ4(*args, size=size, shape=shape, origo=origo,
                            start=start, **kwargs)
         elif eshape == 'Q9':
-            return rgridQ9(*args, size=size, shape=shape, origo=origo,
+            return gridQ9(*args, size=size, shape=shape, origo=origo,
                            start=start, **kwargs)
         elif eshape == 'H8':
-            return rgridH8(*args, size=size, shape=shape, origo=origo,
+            return gridH8(*args, size=size, shape=shape, origo=origo,
                            start=start, **kwargs)
         elif eshape == 'H27':
-            return rgridH27(*args, size=size, shape=shape, origo=origo,
+            return gridH27(*args, size=size, shape=shape, origo=origo,
                             start=start, **kwargs)
         else:
             raise NotImplementedError
@@ -33,8 +33,8 @@ def rgrid(*args, size=None, shape=None, eshape=None, origo=None, start=0,
 
     if isinstance(bins, np.ndarray):
         if bins.shape[0] == 3:
-            coords, topo = rgrid_3d_bins(bins[0], bins[1], bins[2],
-                                         eshape, origo, start)
+            coords, topo = grid_3d_bins(bins[0], bins[1], bins[2],
+                                        eshape, origo, start)
         else:
             # !TODO : fix rgrid_2d_bins
             raise NotImplementedError
@@ -46,26 +46,26 @@ def rgrid(*args, size=None, shape=None, eshape=None, origo=None, start=0,
     return coords, topo
 
 
-def rgridQ4(*args, **kwargs):
-    coords, topo = rgrid(*args, eshape=(2, 2), **kwargs)
+def gridQ4(*args, **kwargs):
+    coords, topo = grid(*args, eshape=(2, 2), **kwargs)
     path = np.array([0, 2, 3, 1], dtype=int)
     return coords, transform_topo(topo, path)
 
 
-def rgridQ9(*args, **kwargs):
-    coords, topo = rgrid(*args, eshape=(3, 3), **kwargs)
+def gridQ9(*args, **kwargs):
+    coords, topo = grid(*args, eshape=(3, 3), **kwargs)
     path = np.array([0, 6, 8, 2, 3, 7, 5, 1, 4], dtype=int)
     return coords, transform_topo(topo, path)
 
 
-def rgridH8(*args, **kwargs):
-    coords, topo = rgrid(*args, eshape=(2, 2, 2), **kwargs)
+def gridH8(*args, **kwargs):
+    coords, topo = grid(*args, eshape=(2, 2, 2), **kwargs)
     path = np.array([0, 4, 6, 2, 1, 5, 7, 3], dtype=int)
     return coords, transform_topo(topo, path)
 
 
-def rgridH27(*args, **kwargs):
-    coords, topo = rgrid(*args, eshape=(3, 3, 3), **kwargs)
+def gridH27(*args, **kwargs):
+    coords, topo = grid(*args, eshape=(3, 3, 3), **kwargs)
     path = np.array([0, 18, 24, 6, 2, 20, 26, 8, 9, 21, 15, 3, 11, 23, 17, 5,
                      1, 19, 25, 7, 4, 22, 10, 16, 12, 14, 13], dtype=int)
     return coords, transform_topo(topo, path)
@@ -306,7 +306,7 @@ def rgrid_2d_bins(xbins, ybins, eshape, origo, start=0):
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
-def rgrid_3d_bins(xbins, ybins, zbins, eshape, origo, start=0):
+def grid_3d_bins(xbins, ybins, zbins, eshape, origo, start=0):
 
     # size
     lX = xbins.max() - xbins.min()
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     origo = 0, 0, 0
     start = 0
 
-    coordsQ9, topoQ9 = rgrid(size=size, shape=shape, eshape=eshape)
+    coordsQ9, topoQ9 = grid(size=size, shape=shape, eshape=eshape)
     coordsQ9_ST, topoQ9_ST = rgridST(size=size, shape=shape, eshape=eshape,
                                      origo=origo, start=start)
     coordsQ9_MT, topoQ9_MT = rgridMT(size=size, shape=shape, eshape=eshape,
@@ -373,7 +373,7 @@ if __name__ == '__main__':
     xbins = np.linspace(0, Lx, nx+1)
     ybins = np.linspace(0, Ly, ny+1)
     zbins = np.linspace(0, Lz, nz+1)
-    coords, topo = rgrid_3d_bins(xbins, ybins, zbins, eshape, origo)
+    coords, topo = grid_3d_bins(xbins, ybins, zbins, eshape, origo)
 
     print(len(xbins))
 
