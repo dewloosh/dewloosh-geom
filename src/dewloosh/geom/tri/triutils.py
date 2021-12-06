@@ -246,7 +246,7 @@ def tri_glob_to_loc(points: np.ndarray, triangles: np.ndarray):
 
 
 if __name__ == '__main__':
-    from polydata.mesh.trimesh import triangulation
+    from dewloosh.geom.trimesh import triangulation
 
     points, triangles, triobj = triangulation(size=(800, 600),
                                               shape=(10, 10))

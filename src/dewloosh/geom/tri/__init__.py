@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
-from polydata.mesh.tri.trimesh import *
-from polydata.mesh.tri.triplot import *
+from dewloosh.geom.tri.trimesh import *
+from dewloosh.geom.tri.triplot import *

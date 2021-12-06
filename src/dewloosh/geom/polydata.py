@@ -257,7 +257,7 @@ class IndexManager(object):
 
 if __name__ == '__main__':
 
-    from polydata.mesh.rgrid import rgrid
+    from dewloosh.geom.rgrid import rgrid
 
     size = Lx, Ly, Lz = 800, 600, 20
     shape = nx, ny, nz = 8, 6, 2
