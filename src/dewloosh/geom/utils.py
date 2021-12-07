@@ -358,6 +358,28 @@ def lengths_of_lines2(ecoords: ndarray):
     return res
 
 
+@njit(nogil=True, parallel=True, cache=__cache)
+def distances_of_points(coords: ndarray):
+    nP = coords.shape[0]
+    res = np.zeros(nP, dtype=coords.dtype)
+    for i in prange(1, nP):
+        res[i] = norm(coords[i] - coords[i-1])
+    return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def pcoords_to_coords(pcoords: ndarray, ecoords: ndarray):
+    nP = pcoords.shape[0]
+    nE = ecoords.shape[0]
+    nX = nE * nP
+    res = np.zeros((nX, ecoords.shape[2]), dtype=ecoords.dtype)
+    for iE in prange(nE):
+        for jP in prange(nP):
+            res[iE * nP + jP] = ecoords[iE, 0] * (1-pcoords[jP]) \
+                + ecoords[iE, -1] * pcoords[jP]
+    return res
+
+
 
 
 
