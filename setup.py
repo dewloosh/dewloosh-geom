@@ -32,7 +32,7 @@ setup(
     long_description=long_description,   
     long_description_content_type="text/markdown",
 	url = 'https://github.com/dewloosh/dewloosh-geom',   
-    download_url = 'https://github.com/dewloosh/dewloosh-geom/archive/refs/tags/0_0_1.zip', 
+    download_url = 'https://github.com/dewloosh/dewloosh-geom/archive/refs/tags/0_0_dev4.zip', 
     packages=find_namespace_packages(where='src', include=['dewloosh.*']),
 	classifiers=[
         'Development Status :: 3 - Alpha',     
