@@ -24,15 +24,17 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 setup(
-	name="dewloosh.geom",
+	name="dewloosh-geom",
     version=get_version("src/Dewloosh/geom/__init__.py"),                        
     author="dewloosh",
     author_email = 'dewloosh@gmail.com',                   
     description="A package to build and manage polygonal data",
     long_description=long_description,   
     long_description_content_type="text/markdown",
-    namespace_packages=find_namespace_packages(include=['dewloosh.*']),
-    classifiers=[
+	url = 'https://github.com/dewloosh/dewloosh-geom',   
+    download_url = 'https://github.com/dewloosh/dewloosh-geom/archive/refs/tags/0_0_1.zip', 
+    packages=find_namespace_packages(where='src', include=['dewloosh.*']),
+	classifiers=[
         'Development Status :: 3 - Alpha',     
         'License :: OSI Approved :: MIT License',   
         'Programming Language :: Python :: 3',
