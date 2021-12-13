@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import pyvista as pv
 import matplotlib.tri as tri
 import scipy.spatial
 from scipy.spatial.qhull import Delaunay as spDelaunay
 from dewloosh.geom.topo import unique_topo_data
 from dewloosh.geom.tri.triutils import edges_tri
-from vtk import vtkIdList
+try:
+    from vtk import vtkIdList
+    __hasvtk__ = True
+except Exception:
+    __hasvtk__ = False
+try:
+    import pyvista as pv
+    __haspyvista__ = True
+except Exception:
+    __haspyvista__ = False
 
 __all__ = ['triangulate']
 
@@ -66,6 +74,8 @@ def triangulate(*args, points = None, size : tuple = None,
                 triobj = scipy.spatial.Delaunay(points[:, 0:2])
                 triangles = triobj.vertices
             elif backend == 'pv':
+                if not __haspyvista__ or not __hasvtk__:
+                    raise ImportError
                 cloud = pv.PolyData(points)
                 triobj = cloud.delaunay_2d()
                 nCell = triobj.n_cells
@@ -110,19 +120,21 @@ def get_triobj_data(obj = None, *args, trim2d = True, **kwarg):
     elif isinstance(obj, tri.Triangulation):
         coords = np.vstack((obj.x, obj.y)).T
         topo = obj.triangles
-    elif isinstance(obj, pv.PolyData):
-        if trim2d:
-            coords = obj.points[:, 0:2]
-        else:
-            coords = obj.points
-        triang = obj.delaunay_2d()
-        nCell = triang.n_cells
-        topo = np.zeros((nCell, 3), dtype = np.int32)
-        for cellID in range(nCell):
-            idlist = vtkIdList()
-            triang.GetCellPoints(cellID, idlist)
-            n = idlist.GetNumberOfIds()
-            topo[cellID] = [idlist.GetId(i) for i in range(n)]
+    else:
+        if __haspyvista__ and __hasvtk__:
+            if isinstance(obj, pv.PolyData):
+                if trim2d:
+                    coords = obj.points[:, 0:2]
+                else:
+                    coords = obj.points
+                triang = obj.delaunay_2d()
+                nCell = triang.n_cells
+                topo = np.zeros((nCell, 3), dtype = np.int32)
+                for cellID in range(nCell):
+                    idlist = vtkIdList()
+                    triang.GetCellPoints(cellID, idlist)
+                    n = idlist.GetNumberOfIds()
+                    topo[cellID] = [idlist.GetId(i) for i in range(n)]
     if coords is None or topo is None:
         raise RuntimeError('Failed to recognize a valid triangulation, '
                            'look for improper input.')
@@ -134,9 +146,11 @@ def is_triobj(triobj):
         if isinstance(triobj, spDelaunay) or \
                 isinstance(triobj, tri.Triangulation):
             return True
-        elif isinstance(triobj, pv.PolyData):
-            if hasattr(triobj, 'delaunay_2d'):
-                return True
+        else:
+            if __haspyvista__:
+                if isinstance(triobj, pv.PolyData):
+                    if hasattr(triobj, 'delaunay_2d'):
+                        return True
     except Exception:
         return False
 

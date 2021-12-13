@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import vtk
-from vtk.util.numpy_support import numpy_to_vtk as np2vtk, \
+try:
+    import vtk
+    from vtk.util.numpy_support import numpy_to_vtk as np2vtk, \
     numpy_to_vtkIdTypeArray as np2vtkId
+    __hasvtk__ = True
+except Exception:
+    __hasvtk__ = False
+
 
 
 def mesh_to_vtk(coords, topo, vtkCellType, deepcopy=True):
+    if not __hasvtk__:
+        raise ImportError
     # points
     vtkpoints = vtk.vtkPoints()
     vtkpoints.SetData(np2vtk(coords, deep=deepcopy))

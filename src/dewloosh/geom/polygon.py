@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import vtk
 from dewloosh.geom.utils import cell_coords_bulk
 from dewloosh.geom.tri.triutils import area_tri_bulk
 from dewloosh.geom.topo.tr import T6_to_T3, Q4_to_T3, Q9_to_Q4
@@ -48,7 +47,7 @@ class PolyGon(PolyCell2d):
 class Triangle(PolyGon):
 
     NNODE = 3
-    vtkCellType = vtk.VTK_TRIANGLE
+    vtkCellType = 5
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,7 +63,7 @@ class Triangle(PolyGon):
 class QuadraticTriangle(PolyGon):
 
     NNODE = 6
-    vtkCellType = vtk.VTK_QUADRATIC_TRIANGLE
+    vtkCellType = 22
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -80,7 +79,7 @@ class QuadraticTriangle(PolyGon):
 class Quadrilateral(PolyGon):
 
     NNODE = 4
-    vtkCellType = vtk.VTK_QUAD
+    vtkCellType = 9
 
     def to_triangles(self, coords=None, topo=None, data=None):
         if coords is None:
@@ -93,7 +92,7 @@ class Quadrilateral(PolyGon):
 class BiQuadraticQuadrilateral(PolyGon):
 
     NNODE = 9
-    vtkCellType = vtk.VTK_BIQUADRATIC_QUAD
+    vtkCellType = 28
 
     def to_triangles(self, coords=None, topo=None, data=None):
         if coords is None:

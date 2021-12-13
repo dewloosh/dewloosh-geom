@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import vtk
 from dewloosh.geom.utils import lengths_of_lines
 from dewloosh.geom.cell import PolyCell1d
 import numpy as np
@@ -48,7 +47,7 @@ def dshp_bulk(pcoords: ndarray):
 class Line(PolyCell1d):
     
     NNODE = 2
-    vtkCellType = vtk.VTK_LINE
+    vtkCellType = 3
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

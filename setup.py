@@ -24,7 +24,7 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 setup(
-	name="dewloosh-geom",
+	name="dewloosh.geom",
     version=get_version("src/Dewloosh/geom/__init__.py"),                        
     author="dewloosh",
     author_email = 'dewloosh@gmail.com',                   

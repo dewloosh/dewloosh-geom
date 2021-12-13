@@ -13,8 +13,16 @@ import awkward as ak
 from typing import Iterable
 from copy import copy
 import numpy as np
-import vtk
-import pyvista as pv
+try:
+    import vtk
+    __hasvtk__ = True
+except Exception:
+    __hasvtk__ = False
+try:
+    import pyvista as pv
+    __haspyvista__ = True
+except Exception:
+    __haspyvista__ = False
 
 
 class PolyData(Hierarchy):
@@ -164,6 +172,8 @@ class PolyData(Hierarchy):
         list(map(foo, blocks))
 
     def to_vtk(self, deepcopy=True, fuse=True):
+        if not __hasvtk__:
+            raise ImportError
         coords = self.coords()
         blocks = list(self.cellblocks(inclusive=True))
         if fuse:
@@ -185,6 +195,8 @@ class PolyData(Hierarchy):
             return res
 
     def to_pv(self, *args, fuse=True, **kwargs):
+        if not __haspyvista__:
+            raise ImportError
         if fuse:
             multiblock = pv.wrap(self.to_vtk(*args, fuse=True, **kwargs))
             multiblock.wrap_nested()
@@ -194,6 +206,8 @@ class PolyData(Hierarchy):
 
     def plot(self, *args, deepcopy=True, jupyter_backend='pythreejs',
              show_edges=True, notebook=False, theme='document', **kwargs):
+        if not __haspyvista__:
+            raise ImportError
         if theme is not None:
             pv.set_plot_theme(theme)
         if notebook:

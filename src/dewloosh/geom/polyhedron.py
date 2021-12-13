@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import vtk
 from dewloosh.geom.cell import PolyCell3d
 import numpy as np
 
@@ -24,7 +23,7 @@ class PolyHedron(PolyCell3d):
 class TetraHedron(PolyHedron):
 
     NNODE = 4
-    vtkCellType = vtk.VTK_TETRA
+    vtkCellType = 10
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,7 +32,7 @@ class TetraHedron(PolyHedron):
 class HexaHedron(PolyHedron):
 
     NNODE = 8
-    vtkCellType = vtk.VTK_HEXAHEDRON
+    vtkCellType = 12
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,7 +41,7 @@ class HexaHedron(PolyHedron):
 class TriquadraticHexaHedron(PolyHedron):
 
     NNODE = 27
-    vtkCellType = vtk.VTK_TRIQUADRATIC_HEXAHEDRON
+    vtkCellType = 29
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,7 +50,7 @@ class TriquadraticHexaHedron(PolyHedron):
 class Wedge(PolyHedron):
 
     NNODE = 6
-    vtkCellType = vtk.VTK_WEDGE
+    vtkCellType = 13
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,7 +59,7 @@ class Wedge(PolyHedron):
 class BiquadraticWedge(PolyHedron):
 
     NNODE = 18
-    vtkCellType = vtk.VTK_BIQUADRATIC_QUADRATIC_WEDGE
+    vtkCellType = 32
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
