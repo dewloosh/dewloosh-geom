@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.0.dev4"
+__version__ = "0.0.dev5"
 import dewloosh.geom.topo.tr as tr
 import dewloosh.geom.topo.topodata as topodata
 from dewloosh.geom.rgrid import *
