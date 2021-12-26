@@ -2,7 +2,9 @@
 import numpy as np
 from numpy import ndarray
 from numba import njit, prange
+from dewloosh.core.squeeze import squeeze
 from dewloosh.math.linalg import normalize
+from dewloosh.math.array import atleast2d
 from dewloosh.geom.utils import center_of_points, \
     cell_center, cell_coords
 __cache = True
@@ -21,7 +23,8 @@ def frame_of_plane(coords: ndarray):
 
 @njit(nogil=True, parallel=True, cache=__cache)
 def frames_of_surfaces(coords: ndarray, topo: ndarray):
-    """Returns the coordinates of the axes forming the local 
+    """
+    Returns the coordinates of the axes forming the local 
     coordinate systems of the surfaces.
 
     Parameters
@@ -50,7 +53,8 @@ def frames_of_surfaces(coords: ndarray, topo: ndarray):
 
 @njit(nogil=True, parallel=True, cache=__cache)
 def tr_cell_glob_to_loc_bulk(coords: np.ndarray, topo: np.ndarray):
-    """Returns the coordinates of the cells in their local coordinate
+    """
+    Returns the coordinates of the cells in their local coordinate
     system, the coordinates of their centers and the coordinates of the 
     axes forming their local coordinate system. The local coordinate systems 
     are located at the centers of the cells.
@@ -91,25 +95,8 @@ def tr_cell_glob_to_loc_bulk(coords: np.ndarray, topo: np.ndarray):
     return res, centers, tr
 
 
-def frames_of_lines_auto(coords: ndarray, topo: ndarray):
-    """
-    Returns the coordinates of the axes forming the local 
-    coordinate systems of the lines. The local 'z' is aligned
-    to global 'z' as close as possible.
-
-    Parameters
-    ----------
-    coords : numpy.ndarray
-        2d coordinate array
-
-    topo : numpy.ndarray
-        2d point-based topology array
-
-    Returns:
-    --------        
-    numpy.ndarray
-        3d array of 3x3 transformation matrices
-    """
+@njit(nogil=True, parallel=True, cache=__cache)
+def _frames_of_lines_auto(coords: ndarray, topo: ndarray):
     nE, nNE = topo.shape
     nNE -= 1
     k = np.array([0, 0, 1], dtype=coords.dtype)
@@ -122,28 +109,7 @@ def frames_of_lines_auto(coords: ndarray, topo: ndarray):
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
-def frames_of_lines_ref(coords: ndarray, topo: ndarray, refZ: ndarray):
-    """
-    Returns the coordinates of the axes forming the local 
-    coordinate systems of the lines. Local 'z' directions are
-    specified by a reference point for each element.
-
-    Parameters
-    ----------
-    coords : numpy.ndarray
-        2d coordinate array
-
-    topo : numpy.ndarray
-        2d point-based topology array
-        
-    refZ : numpy.ndarray
-        2d float array of reference points
-
-    Returns:
-    --------        
-    numpy.ndarray
-        3d array of 3x3 transformation matrices
-    """
+def _frames_of_lines_ref(coords: ndarray, topo: ndarray, refZ: ndarray):
     nE, nNE = topo.shape
     nNE -= 1
     tr = np.zeros((nE, 3, 3), dtype=coords.dtype)
@@ -155,16 +121,46 @@ def frames_of_lines_ref(coords: ndarray, topo: ndarray, refZ: ndarray):
     return tr
 
 
+@squeeze(True)
 def frames_of_lines(coords: ndarray, topo: ndarray, refZ: ndarray=None):
+    """
+    Returns coordinate frames of line elements defined by a coordinate array
+    and a topology array. The cross-sections of the line elements are
+    in the local y-z plane. The direction of the local z axis can be set by 
+    providing reference points in the local x-z planes of the lines. If there
+    are no references provided, local z axes lean towards global z. 
+    Other properties are determined in a way, so that x-y-z form a 
+    right-handed orthonormal basis.
+    
+    Parameters
+    ----------
+    coords : numpy.ndarray
+        2d coordinate array
+
+    topo : numpy.ndarray
+        2d point-based topology array
+        
+    refZ : numpy.ndarray, Optional
+        1d or 2d float array of reference points. If it is 2d, it must
+        contain values for all lines defined by `topo`. 
+        Default is None.
+
+    Returns:
+    --------        
+    numpy.ndarray
+        3d array of 3x3 transformation matrices
+        
+    """
+    topo = atleast2d(topo)
     if isinstance(refZ, ndarray):
         if len(topo.shape) == 2 and len(refZ.shape) == 1:
             _refZ = np.zeros((topo.shape[0], 3))
             _refZ[:] = refZ
         else:
             _refZ = refZ
-        return frames_of_lines_ref(coords, topo, _refZ)
+        return _frames_of_lines_ref(coords, topo, _refZ)
     else:
-        return frames_of_lines_auto(coords, topo)
+        return _frames_of_lines_auto(coords, topo)
 
 
 

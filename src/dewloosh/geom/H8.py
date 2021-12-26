@@ -133,18 +133,15 @@ class H8(HexaHedron):
         return np.array([0., 0., 0.])
 
     def shape_function_derivatives(self, coords=None, *args, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
         if len(coords.shape) == 2:
             return dshp_H8_bulk(coords)
         else:
             return dshp_H8(coords)
 
     def volumes(self, coords=None, topo=None):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         ecoords = cell_coords_bulk(coords, topo)
         qpos, qweight = Gauss(2, 2, 2)
         return volumes_H8(ecoords, qpos, qweight)

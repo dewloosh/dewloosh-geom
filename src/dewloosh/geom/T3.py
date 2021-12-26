@@ -45,8 +45,7 @@ class T3(Triangle):
         return np.array([[1/3, 1/3]])
 
     def shape_function_derivatives(self, coords=None, *args, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
         if len(coords.shape) == 2:
             return repeat(dshp_CST(), coords.shape[0])
         else:

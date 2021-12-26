@@ -15,17 +15,13 @@ class PolyGon(PolyCell2d):
         raise NotImplementedError
 
     def area(self, *args, coords=None, topo=None, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         return np.sum(self.areas(coords, topo))
 
     def areas(self, *args, coords=None, topo=None, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         areas = area_tri_bulk(cell_coords_bulk(
             *self.to_triangles(coords, topo)))
         res = np.sum(areas.reshape(topo.shape[0], int(
@@ -51,12 +47,13 @@ class Triangle(PolyGon):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+    def to_triangles(self, coords, topo):
+        return coords, topo
 
     def areas(self, *args, coords=None, topo=None, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         return area_tri_bulk(cell_coords_bulk(coords, topo))
 
 
@@ -69,10 +66,8 @@ class QuadraticTriangle(PolyGon):
         super().__init__(*args, **kwargs)
 
     def to_triangles(self, coords=None, topo=None, data=None):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         return T6_to_T3(coords, topo, data)
 
 
@@ -82,10 +77,8 @@ class Quadrilateral(PolyGon):
     vtkCellType = 9
 
     def to_triangles(self, coords=None, topo=None, data=None):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         return Q4_to_T3(coords, topo, data)
 
 
@@ -95,10 +88,8 @@ class BiQuadraticQuadrilateral(PolyGon):
     vtkCellType = 28
 
     def to_triangles(self, coords=None, topo=None, data=None):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         return Q4_to_T3(*Q9_to_Q4(coords, topo, data))
 
 

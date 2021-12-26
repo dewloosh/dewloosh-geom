@@ -9,7 +9,8 @@ __cache = True
 @njit(nogil=True, cache=__cache)
 def monoms_LST(pcoord: ndarray):
     r, s = pcoord[0:2]
-    return np.array([1, r, s, r * s, r * r, s * s], dtype=pcoord.dtype)
+    return np.array([1, r, s, r * s, r * r, s * s], 
+                    dtype=pcoord.dtype)
 
 
 @njit(nogil=True, cache=__cache)

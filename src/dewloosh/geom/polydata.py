@@ -229,7 +229,7 @@ class PolyData(Hierarchy):
 
     def __repr__(self):
         return 'PolyData(%s)' % (dict.__repr__(self))
-
+    
 
 class IndexManager(object):
     """This object ought to guarantee, that every cell in a 

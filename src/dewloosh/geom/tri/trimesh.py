@@ -17,13 +17,12 @@ except Exception:
     __haspyvista__ = False
 
 __all__ = ['triangulate']
+ 
 
-
-def triangulate(*args, points = None, size : tuple = None,
-                shape : tuple = None, origo : tuple = None,
-                backend = 'mpl', random = False, triangles = None,
-                triobj = None, return_lines = False, **kwargs):
-
+def triangulate(*args, points=None, size: tuple = None,
+                shape: tuple = None, origo: tuple = None,
+                backend='mpl', random=False, triangles=None,
+                triobj=None, return_lines=False, **kwargs):
     if len(args) > 0:
         if is_triobj(args[0]):
             triobj = args[0]
@@ -44,11 +43,11 @@ def triangulate(*args, points = None, size : tuple = None,
                 shape = (1, 1)
             if isinstance(shape, int):
                 if random:
-                    x = np.hstack([np.array([0,1,1,0], dtype = np.float32),
+                    x = np.hstack([np.array([0, 1, 1, 0], dtype=np.float32),
                                    np.random.rand(shape)])
-                    y = np.hstack([np.array([0,0,1,1], dtype = np.float32),
+                    y = np.hstack([np.array([0, 0, 1, 1], dtype=np.float32),
                                    np.random.rand(shape)])
-                    z = np.zeros(len(x), dtype = np.float32)
+                    z = np.zeros(len(x), dtype=np.float32)
                     points = np.c_[x * size[0] - origo[0],
                                    y * size[1] - origo[1],
                                    z - origo[2]]
@@ -59,9 +58,9 @@ def triangulate(*args, points = None, size : tuple = None,
                                 num=shape[0])
                 y = np.linspace(-origo[1], size[1]-origo[1],
                                 num=shape[1])
-                z = np.zeros(len(x), dtype = np.float32) - origo[2]
+                z = np.zeros(len(x), dtype=np.float32) - origo[2]
                 xx, yy = np.meshgrid(x, y)
-                zz = np.zeros(xx.shape, dtype = xx.dtype)
+                zz = np.zeros(xx.shape, dtype=xx.dtype)
                 # Get the points as a 2D NumPy array (N by 2)
                 points = np.c_[xx.reshape(-1), yy.reshape(-1), zz.reshape(-1)]
 
@@ -79,7 +78,7 @@ def triangulate(*args, points = None, size : tuple = None,
                 cloud = pv.PolyData(points)
                 triobj = cloud.delaunay_2d()
                 nCell = triobj.n_cells
-                triangles = np.zeros((nCell, 3), dtype = np.int32)
+                triangles = np.zeros((nCell, 3), dtype=np.int32)
                 for cellID in range(nCell):
                     idlist = vtkIdList()
                     triobj.GetCellPoints(cellID, idlist)
@@ -89,7 +88,7 @@ def triangulate(*args, points = None, size : tuple = None,
             assert backend == 'mpl', "This feature is not yet supported by " \
                 "other backends, only matplotlib."
             triobj = tri.Triangulation(points[:, 0], points[:, 1],
-                                       triangles = triangles)
+                                       triangles=triangles)
     if return_lines:
         edges, edgeIDs = unique_topo_data(edges_tri(triangles))
         return points, edges, triangles, edgeIDs, triobj
@@ -107,12 +106,12 @@ def triobj_to_mpl(triobj, *args, **kwargs):
     else:
         points, triangles = get_triobj_data(triobj, *args, **kwargs)
         kwargs['backend'] = 'mpl'
-        _, _, triang = triangulate(*args, points = points,
-                                   triangles = triangles, **kwargs)
+        _, _, triang = triangulate(*args, points=points,
+                                   triangles=triangles, **kwargs)
         return triang
 
 
-def get_triobj_data(obj = None, *args, trim2d = True, **kwarg):
+def get_triobj_data(obj=None, *args, trim2d=True, **kwarg):
     coords, topo = None, None
     if isinstance(obj, spDelaunay):
         coords = obj.points
@@ -129,7 +128,7 @@ def get_triobj_data(obj = None, *args, trim2d = True, **kwarg):
                     coords = obj.points
                 triang = obj.delaunay_2d()
                 nCell = triang.n_cells
-                topo = np.zeros((nCell, 3), dtype = np.int32)
+                topo = np.zeros((nCell, 3), dtype=np.int32)
                 for cellID in range(nCell):
                     idlist = vtkIdList()
                     triang.GetCellPoints(cellID, idlist)
@@ -153,9 +152,39 @@ def is_triobj(triobj):
                         return True
     except Exception:
         return False
+    
+
+def circular_disk(nangles, nradii, rmin, rmax):
+    radii = np.linspace(rmin, rmax, nradii)
+    angles = np.linspace(0, 2 * np.pi, nangles, endpoint=False)
+    angles = np.repeat(angles[..., np.newaxis], nradii, axis=1)
+    angles[:, 1::2] += np.pi / nangles
+    x = (radii * np.cos(angles)).flatten()
+    y = (radii * np.sin(angles)).flatten()
+    nP = len(x)
+    triang = tri.Triangulation(x, y)
+    # Mask off unwanted triangles.
+    triang.set_mask(np.hypot(x[triang.triangles].mean(axis=1),
+                            y[triang.triangles].mean(axis=1))
+                    < rmin)
+    triangles = triang.get_masked_triangles()
+    points = np.stack((triang.x, triang.y, np.zeros(nP)), axis = 1)
+    return points, triangles
 
 
 if __name__ == '__main__':
+    from dewloosh.geom import TriMesh
     
-    points, triangles, triobj = triangulate(size = (800, 600), 
-                                            shape = (10, 10))
+    trimesh = TriMesh(size=(800, 600), shape=(10, 10))
+    trimesh.plot()
+    
+    n_angles = 120
+    n_radii = 60
+    min_radius = 5
+    max_radius = 25
+
+    points, triangles = \
+        circular_disk(n_angles, n_radii, min_radius, max_radius)
+        
+    trimesh = TriMesh(points=points, triangles=triangles)
+    trimesh.plot()

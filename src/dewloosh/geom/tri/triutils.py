@@ -64,7 +64,7 @@ def center_tri_3d(ecoords: np.ndarray):
 @njit(nogil=True, cache=__cache)
 def area_tri(ecoords: np.ndarray):
     """
-    Returnsthe the signed area of a 3-noded triangle.
+    Returns the the signed area of a 3-noded triangle.
     """
     A = (ecoords[1, 0]*ecoords[2, 1] - ecoords[2, 0]*ecoords[1, 1]) + \
         (ecoords[2, 0]*ecoords[0, 1] - ecoords[0, 0]*ecoords[2, 1]) + \
@@ -101,12 +101,12 @@ def area_tri_bulk(ecoords: np.ndarray):
 
 
 @vectorize("f8(f8, f8, f8, f8, f8, f8)", target='parallel', cache=__cache)
-def areas_tri_u(x1, y1, x2, y2, x3, y3: np.ndarray):
+def area_tri_u(x1, y1, x2, y2, x3, y3: np.ndarray):
     return (x2*y3 - x3*y2 + x3*y1 - x1*y3 + x1*y2 - x2*y1)/2
 
 
 @vectorize("f8(f8, f8, f8, f8, f8, f8)", target='parallel', cache=__cache)
-def areas_tri_u2(x1, x2, x3, y1, y2, y3: np.ndarray):
+def area_tri_u2(x1, x2, x3, y1, y2, y3: np.ndarray):
     return (x2*y3 - x3*y2 + x3*y1 - x1*y3 + x1*y2 - x2*y1)/2
 
 
@@ -246,10 +246,10 @@ def tri_glob_to_loc(points: np.ndarray, triangles: np.ndarray):
 
 
 if __name__ == '__main__':
-    from dewloosh.geom.trimesh import triangulation
+    from dewloosh.geom.tri.trimesh import triangulate
 
-    points, triangles, triobj = triangulation(size=(800, 600),
-                                              shape=(10, 10))
+    points, triangles, triobj = triangulate(size=(800, 600),
+                                            shape=(10, 10))
     tricoords = cell_coords_bulk(points, triangles)
 
     area0 = 800 * 600
@@ -264,6 +264,6 @@ if __name__ == '__main__':
     y1 = tricoords[:, 0, 1]
     y2 = tricoords[:, 1, 1]
     y3 = tricoords[:, 2, 1]
-    area3 = np.sum(areas_tri_u2(x1, x2, x3, y1, y2, y3))
+    area3 = np.sum(area_tri_u2(x1, x2, x3, y1, y2, y3))
 
     tri_glob_to_loc(points, triangles)

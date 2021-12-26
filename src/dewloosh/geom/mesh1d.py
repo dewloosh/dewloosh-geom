@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.frame import frames_of_lines
+from dewloosh.geom.space import frames_of_lines
 from dewloosh.geom.rgrid import rgridMT as grid
 import numpy as np
 from numpy import ndarray

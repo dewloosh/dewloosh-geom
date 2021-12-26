@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.cell import PolyCell3d
+from dewloosh.geom.tet.tetutils import tet_vol_bulk
+from dewloosh.geom.utils import cell_coords_bulk
 import numpy as np
 
 
@@ -8,16 +10,22 @@ class PolyHedron(PolyCell3d):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @classmethod
-    def to_tetrahedra(cls, coords, topo):
+    def to_tetrahedra(self, coords, topo):
         raise NotImplementedError
 
     def volume(self, *args, coords=None, topo=None, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
         return np.sum(self.volumes(coords, topo))
+    
+    def volumes(self, *args, coords=None, topo=None, **kwargs):
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
+        volumes = tet_vol_bulk(cell_coords_bulk(
+            *self.to_tetrahedra(coords, topo)))
+        res = np.sum(volumes.reshape(topo.shape[0], int(
+            len(volumes)/topo.shape[0])), axis=1)
+        return np.squeeze(res)
 
 
 class TetraHedron(PolyHedron):
@@ -27,6 +35,9 @@ class TetraHedron(PolyHedron):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+    def to_tetrahedra(self, coords, topo):
+        return coords, topo
 
 
 class HexaHedron(PolyHedron):
