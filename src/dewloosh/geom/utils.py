@@ -7,7 +7,28 @@ from dewloosh.math.array import matrixform
 __cache = True
 
 
-def index_of_closest_point(coords: ndarray, target=ndarray):
+def index_of_closest_point(coords: ndarray, target: ndarray):
+    """
+    Returs the index of the closes point to a target.
+    
+    Parameters
+    ----------
+    coords : (nP, nD) numpy.ndarray
+        2d float array of vertex coordinates.
+            nP : number of points in the model
+            nD : number of dimensions of the model space
+            
+    target : numpy.ndarray
+        Coordinate array of the target point.
+
+    Returns
+    -------
+    int
+        The index of `coords`, for which the distance from
+        `target` is minimal.
+    """
+    assert coords.shape[1] == target.shape[0], \
+        "The dimensions of `coords` and `target` are not compatible."
     return np.argmin(norm(coords - target, axis=1))
 
 
@@ -21,9 +42,10 @@ def cell_coords_bulk(coords: ndarray, topo: ndarray) -> ndarray:
     Parameters
     ----------
     coords : (nP, nD) numpy.ndarray
-        Array of all vertex coordinates of an assembly.
+        2d float array of all vertex coordinates of an assembly.
             nP : number of points in the model
             nD : number of dimensions of the model space
+            
     topo : (nE, nNE) numpy.ndarray
         A 2D array of vertex indices. The i-th row contains the vertex indices
         of the i-th element.

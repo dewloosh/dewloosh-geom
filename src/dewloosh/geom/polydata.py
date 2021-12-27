@@ -155,7 +155,7 @@ class PolyData(Hierarchy):
         return np.sum(self.volumes(*args, **kwargs))
 
     def index_of_closest_point(self, target, *args, **kwargs):
-        return index_of_closest_point(self.root().pointdata.x, target)
+        return index_of_closest_point(self.coords(), target)
 
     def set_nodal_distribution_factors(self, *args, assume_regular=False, key='ndf', **kwargs):
         volumes = self.volumes()

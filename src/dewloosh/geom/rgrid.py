@@ -9,7 +9,7 @@ __all__ = ['grid', 'gridQ4', 'gridQ9', 'gridH8', 'gridH27']
 
 
 def grid(*args, size=None, shape=None, eshape=None, origo=None, start=0,
-          bins=None, **kwargs):
+          bins=None, dim=None, **kwargs):
     nDime = len(size)
     if eshape is None:
         eshape = np.full(nDime, 2, dtype=int)

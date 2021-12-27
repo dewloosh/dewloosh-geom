@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.polyhedron import TriquadraticHexaHedron
 from dewloosh.math.numint import GaussPoints as Gauss
+from dewloosh.geom.utils import cell_coords_bulk
 from numba import njit, prange
 import numpy as np
 from numpy import ndarray
@@ -253,19 +254,19 @@ def dshp_H27_bulk(pcoords: ndarray):
     return res
 
 
-@njit(nogil=True, parallel=True, cache=__cache)
-def volumes_H27(points: np.ndarray, qpos: np.ndarray,
-                qweight: np.ndarray, weights: np.ndarray):
-    nE = len(weights)
-    volumes = np.zeros(nE, dtype=points.dtype)
+@njit(nogil=True, parallel=True, fastmath=True, cache=__cache)
+def volumes_H27(ecoords: np.ndarray, qpos: np.ndarray,
+                qweight: np.ndarray):
+    nE = ecoords.shape[0]
+    volumes = np.zeros(nE, dtype=ecoords.dtype)
     nQ = len(qweight)
-    for iQ in prange(nQ):
+    for iQ in range(nQ):
         dshp = dshp_H27(qpos[iQ])
         for i in prange(nE):
-            jac = points[i].T @ dshp
+            jac = ecoords[i].T @ dshp
             djac = np.linalg.det(jac)
             volumes[i] += qweight[iQ] * djac
-    return volumes * weights
+    return volumes
 
 
 class H27(TriquadraticHexaHedron):
@@ -273,25 +274,25 @@ class H27(TriquadraticHexaHedron):
     27-node isoparametric triquadratic hexahedron
 
     top
-    7--14--6
-    |      |
-    15  25  13
-    |      |
-    4--12--5
+    7---14---6
+    |    |   |
+    15--25--13
+    |    |   |
+    4---12---5
 
     middle
     19--23--18
-    |      |
-    20  26  21
-    |      |
+    |    |   |
+    20--26--21
+    |    |   |
     16--22--17
 
     bottom
-    3--10--2
-    |      |
-    11  24  9
-    |      |
-    0-- 8--1
+    3---10---2
+    |    |   |
+    11--24---9
+    |    |   |
+    0----8---1
 
     """
 
@@ -311,17 +312,15 @@ class H27(TriquadraticHexaHedron):
         return np.array([0., 0., 0.])
 
     def shape_function_derivatives(self, coords=None, *args, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
         if len(coords.shape) == 2:
             return dshp_H27_bulk(coords)
         else:
             return dshp_H27(coords)
 
     def volumes(self, coords=None, topo=None):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
+        ecoords = cell_coords_bulk(coords, topo)
         qpos, qweight = Gauss(3, 3, 3)
-        return volumes_H27(coords, qpos, qweight)
+        return volumes_H27(ecoords, qpos, qweight)

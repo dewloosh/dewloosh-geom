@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from dewloosh.geom.utils import cell_coords_bulk
 from dewloosh.geom.polygon import QuadraticTriangle as Triangle
 from numba import njit, prange
 import numpy as np
@@ -56,16 +57,16 @@ def dshp_LST_bulk(pcoords: ndarray):
     return res
 
 
-@njit(nogil=True, parallel=True, cache=__cache)
-def areas_T6(coords: np.ndarray, qpos: np.ndarray,
+@njit(nogil=True, parallel=True, fastmath=True, cache=__cache)
+def areas_T6(ecoords: np.ndarray, qpos: np.ndarray,
              qweight: np.ndarray):
-    nE = len(coords)
-    res = np.zeros(nE, dtype=coords.dtype)
+    nE = len(ecoords)
+    res = np.zeros(nE, dtype=ecoords.dtype)
     nP = len(qweight)
-    for i in prange(nP):
+    for i in range(nP):
         dshp = dshp_LST(qpos[i])
         for iE in prange(nE):
-            jac = coords[iE].T @ dshp
+            jac = ecoords[iE].T @ dshp
             djac = np.linalg.det(jac)
             res[iE] += qweight[i] * djac
     return res
@@ -83,18 +84,17 @@ class T6(Triangle):
         return np.array([[1/3, 1/3]])
 
     def shape_function_derivatives(self, coords=None, *args, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
         if len(coords.shape) == 2:
             return dshp_LST_bulk(coords)
         else:
             return dshp_LST(coords)
 
     def areas(self, *args, coords=None, topo=None, **kwargs):
-        if coords is None:
-            coords = self.pointdata.x.to_numpy()
-        if topo is None:
-            topo = self.nodes.to_numpy()
+        coords = self.pointdata.x.to_numpy() if coords is None else coords
+        topo = self.nodes.to_numpy() if topo is None else topo
+        ecoords = cell_coords_bulk(coords[:, :2], topo)
         qpos, qweight = np.array([[1/6, 1/6], [2/3, 1/6], [1/6, 2/3]]), \
             np.array([1/6, 1/6, 1/6])
-        return areas_T6(coords, qpos, qweight)
+        return areas_T6(ecoords, qpos, qweight)
+    

@@ -10,13 +10,13 @@ __cache = True
 @njit(nogil=True, cache=__cache)
 def monoms_CST(pcoord: ndarray):
     r, s = pcoord[:2]
-    return np.array([1, r, s])
+    return np.array([1, r, s], dtype=pcoord.dtype)
 
 
 @njit(nogil=True, cache=__cache)
 def shp_CST(pcoord: ndarray):
     r, s = pcoord
-    return np.array([1 - r - s, r, s])
+    return np.array([1 - r - s, r, s], dtype=pcoord.dtype)
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
@@ -31,14 +31,14 @@ def shape_function_matrix_CST(pcoord: np.ndarray):
 
 @njit(nogil=True, cache=__cache)
 def dshp_CST():
-    return np.array([[-1, -1], [1, 0], [0, 1]])
+    return np.array([[-1, -1], [1, 0], [0, 1]], dtype=np.float64)
 
 
 class T3(Triangle):
 
     @classmethod
     def lcoords(cls, *args, **kwargs):
-        return np.array([[0., 0.], [1., 0.], [0., 1.]])
+        return np.array([[0., 0.], [1., 0.], [0., 1.]], dtype=np.float64)
 
     @classmethod
     def lcenter(cls, *args, **kwargs):

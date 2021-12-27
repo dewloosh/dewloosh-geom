@@ -8,7 +8,8 @@ __all__ = ['TriMesh']
 
 class TriMesh(PolyData):
     
-    def __init__(self, *args,  points=None, triangles=None, **kwargs):
+    def __init__(self, *args,  points=None, triangles=None, 
+                 celltype=None, **kwargs):
         # parent class handles pointdata and celldata creation
         points = points if points is not None else \
             kwargs.get('coords', None)
@@ -18,6 +19,11 @@ class TriMesh(PolyData):
             # this is here to avoid circular imports
             from dewloosh.geom.tri.trimesh import triangulate
             points, triangles, _ = triangulate(*args, points=points, **kwargs)
+        try:
+            points, triangles = \
+                celltype.from_TriMesh(coords=points, topo=triangles)
+        except Exception:
+            pass
         super().__init__(*args, coords=points, topo=triangles, **kwargs)
 
     def extrude(self, amount, etype='TET', **mesh_params):

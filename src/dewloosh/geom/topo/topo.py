@@ -447,7 +447,8 @@ def nodal_adjacency(topo: TopoLike, *args, frmt=None, assume_regular=False, **kw
 
 
 def unique_topo_data(topo3d: TopoLike):
-    """Returns information about unique topological elements
+    """
+    Returns information about unique topological elements
     of a mesh. It can be used to return unique lines of a 2d
     mesh, unique faces of a 3d mesh, etc.
 

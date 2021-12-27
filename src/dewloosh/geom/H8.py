@@ -86,13 +86,13 @@ def dshp_H8_bulk(pcoords: ndarray):
     return res
 
 
-@njit(nogil=True, parallel=True, cache=__cache)
+@njit(nogil=True, parallel=True, fastmath=True, cache=__cache)
 def volumes_H8(ecoords: np.ndarray, qpos: np.ndarray,
                qweight: np.ndarray):
     nE = ecoords.shape[0]
     volumes = np.zeros(nE, dtype=ecoords.dtype)
     nQ = len(qweight)
-    for iQ in prange(nQ):
+    for iQ in range(nQ):
         dshp = dshp_H8(qpos[iQ])
         for i in prange(nE):
             jac = ecoords[i].T @ dshp

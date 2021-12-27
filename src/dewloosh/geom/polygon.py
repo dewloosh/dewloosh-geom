@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.utils import cell_coords_bulk
 from dewloosh.geom.tri.triutils import area_tri_bulk
-from dewloosh.geom.topo.tr import T6_to_T3, Q4_to_T3, Q9_to_Q4
+from dewloosh.geom.topo.tr import T6_to_T3, Q4_to_T3, \
+    Q9_to_Q4, T3_to_T6
 from dewloosh.geom.cell import PolyCell2d
 import numpy as np
 
@@ -10,6 +11,10 @@ class PolyGon(PolyCell2d):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+    @classmethod
+    def from_TriMesh(cls, *args, coords=None, topo=None, **kwargs):
+        raise NotImplementedError
 
     def to_triangles(self, coords, topo):
         raise NotImplementedError
@@ -50,6 +55,16 @@ class Triangle(PolyGon):
         
     def to_triangles(self, coords, topo):
         return coords, topo
+    
+    @classmethod
+    def from_TriMesh(cls, *args, coords=None, topo=None, **kwargs):
+        from dewloosh.geom.tri.trmsh import TriMesh
+        if len(args) > 0 and isinstance(args[0], TriMesh):
+            return TriMesh.coords(), TriMesh.topology()
+        elif coords is not None and topo is not None:
+            return coords, topo
+        else:
+            raise NotImplementedError
 
     def areas(self, *args, coords=None, topo=None, **kwargs):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
@@ -69,6 +84,16 @@ class QuadraticTriangle(PolyGon):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
         topo = self.nodes.to_numpy() if topo is None else topo
         return T6_to_T3(coords, topo, data)
+    
+    @classmethod
+    def from_TriMesh(cls, *args, coords=None, topo=None, **kwargs):
+        from dewloosh.geom.tri.trmsh import TriMesh
+        if len(args) > 0 and isinstance(args[0], TriMesh):
+            return T3_to_T6(TriMesh.coords(), TriMesh.topology())
+        elif coords is not None and topo is not None:
+            return T3_to_T6(coords, topo)
+        else:
+            raise NotImplementedError
 
 
 class Quadrilateral(PolyGon):
