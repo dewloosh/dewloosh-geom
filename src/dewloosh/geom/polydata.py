@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from dewloosh.core import Hierarchy
+from dewloosh.core import Library
 from dewloosh.math.array import isfloatarray, isintegerarray
 from dewloosh.geom.utils import cell_coords_bulk, \
     detach_mesh_bulk as detach_mesh, cell_center_bulk
@@ -25,7 +25,7 @@ except Exception:
     __haspyvista__ = False
 
 
-class PolyData(Hierarchy):
+class PolyData(Library):
 
     def __init__(self, *args, coords=None, topo=None, celltype=None,
                  **kwargs):
@@ -219,7 +219,7 @@ class PolyData(Hierarchy):
                                                 show_edges=show_edges, notebook=notebook,
                                                 **kwargs)
 
-    def __join_parent__(self, parent: Hierarchy):
+    def __join_parent__(self, parent: Library):
         self.parent = parent
         self._root = parent.root()
         if self._root.cell_index_manager is not None and self.celldata is not None:
