@@ -389,7 +389,8 @@ def dol_to_jagged_data(dol: DoL) -> Tuple[ndarray, ndarray]:
     return widths, data1d
 
 
-def nodal_adjacency(topo: TopoLike, *args, frmt=None, assume_regular=False, **kwargs):
+def nodal_adjacency(topo: TopoLike, *args, frmt=None, 
+                    assume_regular=False, **kwargs):
     """Returns nodal adjacency information of a mesh.
 
     Parameters

@@ -1,13 +1,3 @@
 dewloosh.math
 matplotlib
-#ipywidgets
-#nbinteract
-#pyqt5
-#jupyter_bokeh
-#ipyvtklink
-#itkwidgets
-#ipygany
-#pythreejs
-#panel
-#vtk
-#pyvista
+pyvista

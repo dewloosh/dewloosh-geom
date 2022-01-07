@@ -18,7 +18,6 @@ def _mesh1d_uniform_(coords: ndarray, topo: ndarray, eshape: ndarray, N: int,
     subcoords_, subtopo_ = grid((1,), N, eshape, origo, 0)
     num_node_sub = len(subcoords_)
     N_new = len(coords) + len(topo) * (N - 1)
-    NE_new = len(topo) * N
     coords_new = np.zeros((N_new, coords.shape[1]), dtype=coords.dtype)
     coords_new[:len(coords)] = coords
     frames_new = dict()
