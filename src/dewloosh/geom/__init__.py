@@ -13,4 +13,5 @@ from dewloosh.geom.H8 import H8
 from dewloosh.geom.H27 import H27
 from dewloosh.geom.TET4 import TET4 as Tetra
 from dewloosh.geom.coordarray import CoordinateArray
-from dewloosh.geom.tri.trmsh import TriMesh
+from dewloosh.geom.tri.trimesh import TriMesh
+from dewloosh.geom.tet.tetmesh import TetMesh

@@ -16,7 +16,7 @@ def frame_of_plane(coords: ndarray):
     center = center_of_points(coords)
     tr[:, 0] = normalize(coords[0] - center)
     tr[:, 1] = normalize(coords[np.int(len(coords)/2)] - center)
-    tr[:, 2] = np.cross(tr[:, 0], tr[:, 1])
+    tr[:, 2] = normalize(np.cross(tr[:, 0], tr[:, 1]))
     tr[:, 1] = np.cross(tr[:, 2], tr[:, 0])
     return center, tr
 
@@ -46,7 +46,7 @@ def frames_of_surfaces(coords: ndarray, topo: ndarray):
     for iE in prange(nE):
         tr[iE, 0, :] = normalize(coords[topo[iE, 1]] - coords[topo[iE, 0]])
         tr[iE, 1, :] = normalize(coords[topo[iE, nNE]] - coords[topo[iE, 0]])
-        tr[iE, 2, :] = np.cross(tr[iE, 0, :], tr[iE, 1, :])
+        tr[iE, 2, :] = normalize(np.cross(tr[iE, 0, :], tr[iE, 1, :]))
         tr[iE, 1, :] = np.cross(tr[iE, 2, :], tr[iE, 0, :])
     return tr
 
@@ -86,7 +86,7 @@ def tr_cell_glob_to_loc_bulk(coords: np.ndarray, topo: np.ndarray):
         centers[iE] = cell_center(cell_coords(coords, topo[iE]))
         tr[iE, 0, :] = normalize(coords[topo[iE, 1]] - coords[topo[iE, 0]])
         tr[iE, 1, :] = normalize(coords[topo[iE, nNE-1]] - coords[topo[iE, 0]])
-        tr[iE, 2, :] = np.cross(tr[iE, 0, :], tr[iE, 1, :])
+        tr[iE, 2, :] = normalize(np.cross(tr[iE, 0, :], tr[iE, 1, :]))
         tr[iE, 1, :] = np.cross(tr[iE, 2, :], tr[iE, 0, :])
         for jN in prange(nNE):
             vj = coords[topo[iE, jN]] - centers[iE]
@@ -161,6 +161,33 @@ def frames_of_lines(coords: ndarray, topo: ndarray, refZ: ndarray=None):
         return _frames_of_lines_ref(coords, topo, _refZ)
     else:
         return _frames_of_lines_auto(coords, topo)
+    
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def is_planar_surface(normals: ndarray, tol=1e-8):
+    """
+    Returns true if all the normals point in the same direction.
+    The provided normal vectors are assumed to be normalized.
+    
+    Parameters
+    ----------
+    normals : numpy.ndarray
+        2d float array of surface normals
+        
+    tol : float
+        Floating point tolerance as maximum deviation.
+
+    Returns:
+    --------        
+    Bool
+        True if the surfaces whose normal vectors are provided form
+        a flat surface, False otherwise.
+    """
+    nE = normals.shape[0]
+    diffs = np.zeros(nE, dtype=normals.dtype)
+    for i in prange(1, nE):
+        diffs[i] = np.abs(normals[i] @ normals[0] - 1)
+    return diffs.max() <= tol
 
 
 

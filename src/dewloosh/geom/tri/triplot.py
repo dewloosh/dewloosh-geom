@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.tri.trimesh import triobj_to_mpl, get_triobj_data, triangulate
+from dewloosh.geom.tri.triang import triobj_to_mpl, get_triobj_data, \
+    triangulate
 from dewloosh.geom.tri.triutils import offset_tri
 from dewloosh.geom.utils import cell_coords_bulk, explode_mesh_data_bulk
 from dewloosh.core.tools.typing import issequence

@@ -2,6 +2,7 @@
 from dewloosh.geom.utils import cell_coords_bulk, cell_coords
 from dewloosh.math.linalg import normalize
 import numpy as np
+from numpy import ndarray
 from numba import njit, prange, vectorize
 __cache = True
 
@@ -243,10 +244,13 @@ def tri_glob_to_loc(points: np.ndarray, triangles: np.ndarray):
             res[iE, jN, 0] = np.dot(tr[iE, 0, :], vj)
             res[iE, jN, 1] = np.dot(tr[iE, 1, :], vj)
     return res, centers, tr
-
-
+  
+    
 if __name__ == '__main__':
-    from dewloosh.geom.tri.trimesh import triangulate
+    from dewloosh.geom.tri import triangulate
+    from dewloosh.geom.space.utils import frames_of_surfaces, \
+        is_planar_surface
+    from dewloosh.math.array import ascont
 
     points, triangles, triobj = triangulate(size=(800, 600),
                                             shape=(10, 10))
@@ -267,3 +271,6 @@ if __name__ == '__main__':
     area3 = np.sum(area_tri_u2(x1, x2, x3, y1, y2, y3))
 
     tri_glob_to_loc(points, triangles)
+    frames = frames_of_surfaces(points, triangles)
+    normals = ascont(frames[:, 2, :])
+    print(is_planar_surface(normals))

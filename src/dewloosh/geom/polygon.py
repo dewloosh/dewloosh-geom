@@ -58,7 +58,7 @@ class Triangle(PolyGon):
     
     @classmethod
     def from_TriMesh(cls, *args, coords=None, topo=None, **kwargs):
-        from dewloosh.geom.tri.trmsh import TriMesh
+        from dewloosh.geom.tri import TriMesh
         if len(args) > 0 and isinstance(args[0], TriMesh):
             return TriMesh.coords(), TriMesh.topology()
         elif coords is not None and topo is not None:
@@ -87,7 +87,7 @@ class QuadraticTriangle(PolyGon):
     
     @classmethod
     def from_TriMesh(cls, *args, coords=None, topo=None, **kwargs):
-        from dewloosh.geom.tri.trmsh import TriMesh
+        from dewloosh.geom.tri import TriMesh
         if len(args) > 0 and isinstance(args[0], TriMesh):
             return T3_to_T6(TriMesh.coords(), TriMesh.topology())
         elif coords is not None and topo is not None:

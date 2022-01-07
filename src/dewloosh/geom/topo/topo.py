@@ -454,8 +454,8 @@ def unique_topo_data(topo3d: TopoLike):
 
     Parameters
     ----------
-        topo : numpy.ndarray 
-            Topology array.
+    topo : numpy.ndarray 
+        Topology array.
 
     Returns
     -------
