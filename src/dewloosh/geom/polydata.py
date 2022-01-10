@@ -39,8 +39,8 @@ class PolyData(Library):
         if coords is not None:
             assert self.is_root(), "Currently only the top-level structure \
                 (root) can hold onto point data."
-            assert isfloatarray(coords), "Coordinates must be provided \
-                as a numpy array of floats."
+            if isinstance(coords, np.ndarray):
+                coords = coords.astype(float)
             nP = coords.shape[0]
             activity = np.ones(nP, dtype=bool)
             self.pointdata = ak.zip(
