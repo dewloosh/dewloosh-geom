@@ -14,17 +14,34 @@ __cache = True
 
 
 __all__ = ['is_regular', 'regularize', 'count_cells_at_nodes', 'cells_at_nodes',
-           'nodal_adjacency', 'unique_topo_data']
+           'nodal_adjacency', 'unique_topo_data', 'remap_topo']
 
 
 TopoLike = Union[ndarray, JaggedArray]
 DoL = Dict[int, List[int]]
 
 
+@njit(nogil=True, parallel=True, cache=__cache)
+def remap_topo(topo: ndarray, imap):
+    """
+    Returns a new topology array. The argument 'imap' may be
+    a dictionary or an array, that contains new indices for
+    the indices in the old topology array.
+    """
+    nE, nNE = topo.shape
+    res = np.zeros_like(topo)
+    for iE in prange(nE):
+        for jNE in prange(nNE):
+            res[iE, jNE] = imap[topo[iE, jNE]]
+    return res
+
+
 def is_regular(topo: TopoLike) -> bool:
-    """Returns True if the topology is regular, in the meaning
+    """
+    Returns True if the topology is regular, in the meaning
     that the smallest node index is zero, and every integer
-    is represented up to the maximum index."""
+    is represented up to the maximum index.
+    """
     if isinstance(topo, ndarray):
         return topo.min() == 0 and len(np.unique(topo)) == topo.max() + 1
     elif isinstance(topo, akarray):
@@ -34,9 +51,11 @@ def is_regular(topo: TopoLike) -> bool:
 
 
 def regularize(topo: TopoLike) -> Tuple[TopoLike, ndarray]:
-    """Returns a regularized topology and the unique indices.
+    """
+    Returns a regularized topology and the unique indices.
     The returned topology array contain indices of the unique
-    array."""
+    array.
+    """
     if isinstance(topo, ndarray):
         unique, regular = np.unique(topo, return_inverse=True)
         regular = regular.reshape(topo.shape)
@@ -50,7 +69,9 @@ def regularize(topo: TopoLike) -> Tuple[TopoLike, ndarray]:
 
 @njit(nogil=True, parallel=False, fastmath=True, cache=__cache)
 def _count_cells_at_nodes_reg_np_(topo: ndarray) -> ndarray:
-    """Assumes a regular topology. Returns an array."""
+    """
+    Assumes a regular topology. Returns an array.
+    """
     nE, nNE = topo.shape
     nN = topo.max() + 1
     count = np.zeros((nN), dtype=topo.dtype)
@@ -62,7 +83,9 @@ def _count_cells_at_nodes_reg_np_(topo: ndarray) -> ndarray:
 
 @njit(nogil=True, parallel=False, fastmath=True, cache=__cache)
 def _count_cells_at_nodes_reg_ak_(topo: akarray) -> ndarray:
-    """Assumes a regular topology. Returns an array."""
+    """
+    Assumes a regular topology. Returns an array.
+    """
     ncols = count_cols(topo)
     nE = len(ncols)
     nN = np.max(topo) + 1
@@ -75,10 +98,12 @@ def _count_cells_at_nodes_reg_ak_(topo: akarray) -> ndarray:
 
 @njit(nogil=True, parallel=False, fastmath=True, cache=__cache)
 def _count_cells_at_nodes_np_(topo: ndarray, nodeIDs: ndarray) -> Dict[int, int]:
-    """Returns a dict{int : int} for the nodes in `nideIDs`.
+    """
+    Returns a dict{int : int} for the nodes in `nideIDs`.
     Assumes an irregular topology. The array `topo` must contain 
     indices relative to `nodeIDs`. If the topology is regular, 
-    `nodeIDs == np.arange(topo.max() + 1)` is `True`."""
+    `nodeIDs == np.arange(topo.max() + 1)` is `True`.
+    """
     nE, nNE = topo.shape
     count = dict()
     for i in range(len(nodeIDs)):
@@ -91,10 +116,12 @@ def _count_cells_at_nodes_np_(topo: ndarray, nodeIDs: ndarray) -> Dict[int, int]
 
 @njit(nogil=True, parallel=False, fastmath=True, cache=__cache)
 def _count_cells_at_nodes_ak_(topo: akarray, nodeIDs: ndarray) -> Dict[int, int]:
-    """Returns a dict{int : int} for the nodes in `nideIDs`.
+    """
+    Returns a dict{int : int} for the nodes in `nideIDs`.
     Assumes an irregular topology. The array `topo` must contain 
     indices relative to `nodeIDs`. If the topology is regular, 
-    `nodeIDs == np.arange(topo.max() + 1)` is `True`."""
+    `nodeIDs == np.arange(topo.max() + 1)` is `True`.
+    """
     ncols = count_cols(topo)
     nE = len(ncols)
     count = dict()

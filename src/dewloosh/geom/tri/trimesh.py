@@ -41,7 +41,7 @@ class TriMesh(PolyData):
     """
     
     def __init__(self, *args,  points=None, triangles=None, 
-                 celltype=None, **kwargs):
+                 celltype=None, frame=None, **kwargs):
         # parent class handles pointdata and celldata creation
         points = points if points is not None else \
             kwargs.get('coords', None)
@@ -63,8 +63,8 @@ class TriMesh(PolyData):
             else:
                 raise NotImplementedError
         super().__init__(*args, coords=points, topo=triangles, 
-                         celltype=celltype, **kwargs)
-        
+                         celltype=celltype, frame=frame, **kwargs)
+          
     def frames(self):
         """
         Returns the normalized coordinate frames of triangles.

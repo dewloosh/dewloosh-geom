@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from dewloosh.core import Library
-from dewloosh.math.array import isfloatarray, isintegerarray
+from dewloosh.math.linalg import Vector, VectorBase
+from dewloosh.math.linalg import ReferenceFrame as FrameLike
+from dewloosh.geom.space import CartesianFrame
 from dewloosh.geom.utils import cell_coords_bulk, \
     detach_mesh_bulk as detach_mesh, cell_center_bulk
 from dewloosh.geom.vtkutils import mesh_to_vtk
@@ -9,9 +11,13 @@ from dewloosh.geom.Q4 import Q4 as Quadrilateral
 from dewloosh.geom.polyhedron import HexaHedron, Wedge, TriquadraticHexaHedron
 from dewloosh.geom.utils import index_of_closest_point, nodal_distribution_factors
 from dewloosh.geom.topo import regularize, nodal_adjacency, cells_at_nodes
+from dewloosh.geom.space import PointCloud
+from dewloosh.geom.topo.topologyarray import TopologyArray
 import awkward as ak
 from typing import Iterable
 from copy import copy
+from typing import Union
+from numpy import ndarray
 import numpy as np
 try:
     import vtk
@@ -25,27 +31,54 @@ except Exception:
     __haspyvista__ = False
 
 
+def gen_frame(coords): return CartesianFrame(dim=coords.shape[1])
+
+VectorLike = Union[Vector, ndarray]
+
 class PolyData(Library):
+    
+    """
+    A class to handle complex polygonal data.
+    """
 
     def __init__(self, *args, coords=None, topo=None, celltype=None,
-                 **kwargs):
+                 frame: FrameLike=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.pointdata = None
         self.celldata = None
         self.celltype = None
         self.cell_index_manager = None
 
+        # coordinate frame
+        if not isinstance(frame, FrameLike):
+            if coords is not None:
+                frame = gen_frame(coords)
+        self._frame = frame
+
         # set coordinates
         if coords is not None:
             assert self.is_root(), "Currently only the top-level structure \
                 (root) can hold onto point data."
             if isinstance(coords, np.ndarray):
-                coords = coords.astype(float)
-            nP = coords.shape[0]
-            activity = np.ones(nP, dtype=bool)
-            self.pointdata = ak.zip(
-                {'x': coords, 'active': activity}, depth_limit=1)
-            self.cell_index_manager = IndexManager()
+                nP, nD = coords.shape
+                if nD == 2:
+                    if isinstance(frame, FrameLike):
+                        if len(frame) == 3:
+                            _c = np.zeros((nP, 3))
+                            _c[:, :2] = coords
+                            coords = _c
+                            coords = PointCloud(coords, frame=frame).view()
+                        elif len(frame) == 2:
+                            coords = PointCloud(
+                                coords[:, :2], frame=frame).view()
+                elif nD == 3:
+                    coords = PointCloud(coords, frame=frame).view()
+                activity = np.ones(nP, dtype=bool)
+                self.pointdata = ak.zip(
+                    {'x': coords, 'active': activity}, depth_limit=1)
+                self.cell_index_manager = IndexManager()
+            else:
+                raise NotImplementedError
 
         # set topology
         if topo is not None:
@@ -67,9 +100,10 @@ class PolyData(Library):
             assert celltype is not None
 
             root = self.root()
-            assert isintegerarray(topo), "Topology must be provided as a \
-                numpy array of integers."
-            topo = topo.astype(np.int64)
+            if isinstance(topo, np.ndarray):
+                topo = topo.astype(int)
+            else:
+                raise TypeError("Topo must be an 1d array of integers.")
             if root.cell_index_manager is not None:
                 GIDs = np.array(
                     root.cell_index_manager.generate(topo.shape[0]))
@@ -79,7 +113,6 @@ class PolyData(Library):
             else:
                 self.celldata = celltype(wrap=ak.zip({'nodes': topo}, depth_limit=1),
                                          pointdata=root.pointdata)
-
             self.celltype = celltype
 
     def blocks(self, *args, inclusive=False, blocktype=None, deep=True, **kwargs):
@@ -89,9 +122,31 @@ class PolyData(Library):
     def cellblocks(self, *args, **kwargs):
         return filter(lambda i: i.celldata is not None, self.blocks(*args, **kwargs))
 
-    def coords(self, *args, return_inds=False, **kwargs):
+    @property
+    def frame(self):
         if self.is_root():
-            return self.pointdata.x.to_numpy()
+            return self._frame
+        else:
+            f = self._frame
+            return f if f is not None else self.parent.frame
+
+    def points(self, *args, return_inds=False, **kwargs) -> PointCloud:
+        if self.is_root():
+            coords = self.pointdata.x.to_numpy()
+            frame = self.frame
+            frame = gen_frame(coords) if frame is None else frame
+            return PointCloud(coords, frame=frame)
+        else:
+            # returns a sorted array of unique indices
+            inds = np.unique(self.topology())
+            if return_inds:
+                return self.root().points()[inds, :], inds
+            else:
+                return self.root().points()[inds, :]
+
+    def coords(self, *args, return_inds=False, **kwargs) -> VectorBase:
+        if self.is_root():
+            return self.points().show()
         else:
             # returns a sorted array of unique indices
             inds = np.unique(self.topology())
@@ -99,13 +154,41 @@ class PolyData(Library):
                 return self.root().coords()[inds, :], inds
             else:
                 return self.root().coords()[inds, :]
+            
+    def move(self, v : VectorLike, frame: FrameLike = None):
+        if self.is_root():
+            pc = self.points()
+            pc.move(v, frame)
+            self.pointdata['x'] = pc.show(self.frame)           
+        else:
+            root = self.root()
+            inds = np.unique(self.topology())
+            pc = root.points()[inds]
+            pc.move(v, frame)
+            root.pointdata['x'] = pc.show(self.frame)
+        return self
+    
+    def rotate(self, *args, **kwargs):
+        if self.is_root():
+            pc = self.points()
+            pc.rotate(*args, **kwargs)
+            self.pointdata['x'] = pc.show(self.frame)           
+        else:
+            root = self.root()
+            inds = np.unique(self.topology())
+            pc = root.points()[inds]
+            pc.rotate(*args, **kwargs)
+            root.pointdata['x'] = pc.show(self.frame)
+        return self
 
     def topology(self, *args, return_inds=False, **kwargs):
         blocks = list(self.cellblocks(*args, inclusive=True, **kwargs))
         topo = list(map(lambda i: i.celldata.nodes.to_numpy(), blocks))
         shapes = np.array(list(map(lambda arr: arr.shape[1], topo)))
         if not np.all(shapes == shapes[0]):
-            raise NotImplementedError
+            if return_inds:
+                raise NotImplementedError
+            return TopologyArray(*topo)
         else:
             topo = np.vstack(topo)
             if return_inds:
@@ -132,8 +215,30 @@ class PolyData(Library):
     def cellcoords(self, *args, **kwargs):
         return cell_coords_bulk(self.root().coords(), self.topology(*args, **kwargs))
 
-    def centers(self, *args, **kwargs):
-        return cell_center_bulk(self.root().coords(), self.topology(*args, **kwargs))
+    def center(self, target: FrameLike = None):
+        if self.is_root():
+            return self.points().center(target)         
+        else:
+            root = self.root()
+            inds = np.unique(self.topology())
+            pc = root.points()[inds]
+            return pc.center(target)
+        
+    def centers(self, *args, target: FrameLike = None, **kwargs):
+        if self.is_root():
+            coords = self.points().show(target)         
+        else:
+            root = self.root()
+            inds = np.unique(self.topology())
+            pc = root.points()[inds]
+            coords = pc.show(target)
+        return cell_center_bulk(coords, self.topology(*args, **kwargs))
+
+    def centralize(self, target: FrameLike = None):
+        pc = self.root().points()
+        pc.centralize(target)
+        self.pointdata['x'] = pc.show(self.frame) 
+        return self
 
     def areas(self, *args, **kwargs):
         coords = self.root().coords()
@@ -151,6 +256,7 @@ class PolyData(Library):
         vmap = map(lambda b: b.celldata.volumes(coords=coords), blocks)
         return np.concatenate(list(vmap))
 
+    @property 
     def volume(self, *args, **kwargs):
         return np.sum(self.volumes(*args, **kwargs))
 
@@ -177,10 +283,15 @@ class PolyData(Library):
         coords = self.coords()
         blocks = list(self.cellblocks(inclusive=True))
         if fuse:
+            if len(blocks) == 1:
+                topo = blocks[0].celldata.nodes.to_numpy().astype(np.int64)
+                ugrid = mesh_to_vtk(*detach_mesh(coords, topo),
+                                    blocks[0].celltype.vtkCellType, deepcopy)
+                return ugrid
             mb = vtk.vtkMultiBlockDataSet()
             mb.SetNumberOfBlocks(len(blocks))
             for i, block in enumerate(blocks):
-                topo = block.celldata.nodes.to_numpy()
+                topo = block.celldata.nodes.to_numpy().astype(np.int64)
                 ugrid = mesh_to_vtk(*detach_mesh(coords, topo),
                                     block.celltype.vtkCellType, deepcopy)
                 mb.SetBlock(i, ugrid)
@@ -199,7 +310,10 @@ class PolyData(Library):
             raise ImportError
         if fuse:
             multiblock = pv.wrap(self.to_vtk(*args, fuse=True, **kwargs))
-            multiblock.wrap_nested()
+            try:
+                multiblock.wrap_nested()
+            except AttributeError:
+                pass
             return multiblock
         else:
             return [pv.wrap(i) for i in self.to_vtk(*args, fuse=False, **kwargs)]
@@ -212,7 +326,8 @@ class PolyData(Library):
             pv.set_plot_theme(theme)
         if notebook:
             pv.wrap(self.to_vtk(deepcopy)).plot(*args,
-                                                jupyter_backend=jupyter_backend, show_edges=show_edges,
+                                                jupyter_backend=jupyter_backend,
+                                                show_edges=show_edges,
                                                 notebook=notebook, **kwargs)
         else:
             pv.wrap(self.to_vtk(deepcopy)).plot(*args,
@@ -229,7 +344,7 @@ class PolyData(Library):
 
     def __repr__(self):
         return 'PolyData(%s)' % (dict.__repr__(self))
-    
+
 
 class IndexManager(object):
     """This object ought to guarantee, that every cell in a 
@@ -271,15 +386,15 @@ class IndexManager(object):
 
 if __name__ == '__main__':
 
-    from dewloosh.geom.rgrid import rgrid
+    from dewloosh.geom.rgrid import grid
 
     size = Lx, Ly, Lz = 800, 600, 20
     shape = nx, ny, nz = 8, 6, 2
     vtkCellType = vtk.VTK_TRIQUADRATIC_HEXAHEDRON
 
-    coords1, topo1 = rgrid(size=size, shape=shape, eshape='H27')
-    coords2, topo2 = rgrid(size=size, shape=shape, eshape='H27',
-                           origo=(0, 0, 100))
+    coords1, topo1 = grid(size=size, shape=shape, eshape='H27')
+    coords2, topo2 = grid(size=size, shape=shape, eshape='H27',
+                          origo=(0, 0, 100))
     coords = np.vstack([coords1, coords2])
     topo2 += coords1.shape[0]
 
@@ -290,3 +405,12 @@ if __name__ == '__main__':
                                      vtkCellType=vtkCellType)
 
     pd.plot()
+    
+    print('center : {}'.format(pd.center()))
+    print(pd.points().x().min())
+    print(pd.points().x().max())
+    pd.move(np.array([1.0, 0.0, 0.0]))
+    print(pd.points().x().min())
+    print(pd.points().x().max())
+    pd.centralize()
+    print('center : {}'.format(pd.center()))

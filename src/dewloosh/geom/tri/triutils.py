@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.utils import cell_coords_bulk, cell_coords
-from dewloosh.math.linalg import normalize
+from dewloosh.math.linalg import normalize, norm
 import numpy as np
 from numpy import ndarray
 from numba import njit, prange, vectorize
@@ -71,6 +71,39 @@ def area_tri(ecoords: np.ndarray):
         (ecoords[2, 0]*ecoords[0, 1] - ecoords[0, 0]*ecoords[2, 1]) + \
         (ecoords[0, 0]*ecoords[1, 1] - ecoords[1, 0]*ecoords[0, 1])
     return A/2
+
+
+@njit(nogil=True, cache=__cache)
+def inscribed_radius(ecoords: ndarray):
+    """
+    Returns the radious of the inscribed circle of a triangle.
+    
+    Notes
+    -----
+    If the sides have length a, b, c, we define the semiperimeter s 
+    to be half their sum, so s = (a+b+c)/2. Given this, the radius is 
+    given using the following:
+    
+        r2 = (s - a)*(s - b)*(s - c) / s.
+    """
+    a = norm(ecoords[1] - ecoords[0])
+    b = norm(ecoords[2] - ecoords[1])
+    c = norm(ecoords[2] - ecoords[0])
+    s = (a + b + c) / 2
+    return np.sqrt((s - a) * (s - b) * (s - c) / s)
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def inscribed_radii(ecoords: ndarray):
+    """
+    Returns the radii of the inscribed circle of many triangles.
+    
+    """
+    nE = ecoords.shape[0]
+    res = np.zeros(nE)
+    for i in prange(nE):
+        res[i] = inscribed_radius(ecoords[i])
+    return res
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
@@ -148,6 +181,22 @@ def loc_to_nat_tri(lcoord: np.ndarray):
 @njit(nogil=True, cache=__cache)
 def nat_to_loc_tri(acoord: np.ndarray):
     return lcoords_tri.T @ acoord
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def get_points_inside_triangles(points: ndarray, topo: ndarray, 
+                                coords: ndarray):
+    nE = topo.shape[0]
+    nC = coords.shape[0]
+    ecoords = cell_coords_bulk(points, topo)
+    res = np.zeros(nC, dtype=np.int64)
+    for iC in prange(nC):
+        for iE in prange(nE):
+            nat = glob_to_nat_tri(coords[iC], ecoords[iE])
+            if np.max(nat) <= 1.0:
+                res[iC] = 1
+                break            
+    return res
 
 
 def offset_tri(coords: np.ndarray, topo: np.ndarray, data: np.ndarray,

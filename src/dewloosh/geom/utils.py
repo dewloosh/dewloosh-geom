@@ -4,6 +4,7 @@ from numpy import ndarray
 from numpy.linalg import norm
 from numba import njit, prange
 from dewloosh.math.array import matrixform
+from dewloosh.geom.topo import remap_topo
 __cache = True
 
 
@@ -262,21 +263,6 @@ def inds_to_invmap_as_array(inds: np.ndarray):
     return res
 
 
-@njit(nogil=True, parallel=True, cache=__cache)
-def remap_topo(topo: ndarray, imap):
-    """
-    Returns a new topology array. The argument 'imap' may be
-    a dictionary or an array, that contains new indices for
-    the indices in the old topology array.
-    """
-    nE, nNE = topo.shape
-    res = np.zeros_like(topo)
-    for iE in prange(nE):
-        for jNE in prange(nNE):
-            res[iE, jNE] = imap[topo[iE, jNE]]
-    return res
-
-
 @njit(nogil=True, cache=__cache)
 def detach_mesh_bulk(coords: ndarray, topo: ndarray):
     """
@@ -360,6 +346,17 @@ def center_of_points(coords : ndarray):
     for i in prange(res.shape[0]):
         res[i] = np.mean(coords[:, i])
     return res
+
+
+@njit(nogil=True, cache=__cache)
+def centralize(coords : ndarray):
+    nD = coords.shape[1]
+    center = center_of_points(coords)
+    coords[:, 0] -= center[0]
+    coords[:, 1] -= center[1]
+    if nD > 2:
+        coords[:, 2] -= center[2]
+    return coords
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
