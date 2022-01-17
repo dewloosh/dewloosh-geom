@@ -23,11 +23,10 @@ VectorLike = Union[Vector, ndarray]
 
 def move_coords(coords, v):
     res = np.zeros_like(coords)
-    res[:, :] = coords
-    res[:, 0] += v[0]
-    res[:, 1] += v[1]
+    res[:, 0] = coords[:, 0] + v[0]
+    res[:, 1] = coords[:, 1] + v[1]
     if v.shape[0] > 2:
-        res[:, 2] += v[2]
+        res[:, 2] = coords[:, 2] + v[2]
     return res
 
 
@@ -204,7 +203,7 @@ class PointCloud(Vector):
         
         """
         o = self.frame.origo(target)
-        arr = self.array @ self.frame.dcm(target=target).T
+        arr = self._array @ self.frame.dcm(target=target).T
         return move_coords(arr, o)
             
     def move(self, v : VectorLike, frame: FrameLike = None):
