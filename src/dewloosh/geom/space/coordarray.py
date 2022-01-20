@@ -13,6 +13,10 @@ import operator
 from typing import Union
 from numpy import ndarray
 import numpy as np
+from numba import njit, prange
+from typing import Union
+from collections import Iterable
+__cache = True
 
 
 __all__ = ['PointCloud']
@@ -21,13 +25,24 @@ __all__ = ['PointCloud']
 VectorLike = Union[Vector, ndarray]
 
 
-def move_coords(coords, v):
+@njit(nogil=True, parallel=True, cache=__cache)
+def show_coords(dcm: np.ndarray, coords: np.ndarray):
     res = np.zeros_like(coords)
-    res[:, 0] = coords[:, 0] + v[0]
-    res[:, 1] = coords[:, 1] + v[1]
-    if v.shape[0] > 2:
-        res[:, 2] = coords[:, 2] + v[2]
+    for i in prange(coords.shape[0]):
+        res[i] = dcm @ coords[i,:]
     return res
+
+
+def dcoords(coords, v):
+    res = np.zeros_like(coords)
+    res[:, 0] = v[0]
+    res[:, 1] = v[1]
+    try:
+        res[:, 2] = v[2]
+    except IndexError:
+        pass
+    finally:
+        return res
 
 
 class PointCloud(Vector):
@@ -202,9 +217,10 @@ class PointCloud(Vector):
             A numpy array.
         
         """
-        o = self.frame.origo(target)
-        arr = self._array @ self.frame.dcm(target=target).T
-        return move_coords(arr, o)
+        arr = show_coords(self.frame.dcm(target=target), self.array)
+        dc = dcoords(arr, self.frame.origo(target))
+        buf = arr + dc
+        return self._array_cls_(shape=buf.shape, buffer=buf, dtype=buf.dtype)
             
     def move(self, v : VectorLike, frame: FrameLike = None):
         """
@@ -250,7 +266,7 @@ class PointCloud(Vector):
         if not isinstance(v, Vector):
             v = Vector(v, frame=frame)
         arr = v.show(self.frame)
-        self._array = move_coords(self._array, arr)
+        self._array += dcoords(self._array, arr)
         return self
         
     def centralize(self, target: FrameLike = None):
@@ -289,7 +305,7 @@ class PointCloud(Vector):
         
         """
         if isinstance(args[0], FrameLike):
-            self._array = self._array @ self.frame.dcm(target=args[0])
+            self._array = (self.frame.dcm(target=args[0]) @ self.array.T).T
             return self
         else:
             target = self.frame.orient_new(*args, **kwargs)

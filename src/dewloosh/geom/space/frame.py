@@ -99,30 +99,22 @@ class CartesianFrame(ReferenceFrame):
         [0.7071, 0.7071, 0.]
 
         """
-        if self.parent is None:
-            if target is None:
+        if self.parent is None and not isinstance(self._origo, ndarray):
+            self._origo = np.zeros(len(self.axes))
+                
+        if target is None:
+            if self.parent is None:
+                return Vector(self._origo).show()
+            else:
                 if isinstance(self._origo, ndarray):
-                    return self._origo
-                elif self._origo is None:
-                    return np.zeros(len(self.axes))
-                else:
-                    raise NotImplementedError
-            elif isinstance(target, ReferenceFrame):
-                o_self = self._origo if self._origo is not None \
-                    else np.zeros(len(self.axes))
-                o_target = target.origo()
-                return Vector(o_self - o_target).show(target)
-        else:
-            if target is None:
-                if isinstance(self._origo, ndarray):
-                    o = Vector(self._origo, frame=self.parent).show()
-                    return self.parent.origo() + o
+                    v = Vector(self._origo, frame=self.parent).show()
+                    return self.parent.origo() + v
                 else:
                     return self.parent.origo()
-            elif isinstance(target, ReferenceFrame):
-                o_self = self.origo()
-                o_target = target.origo()
-                return Vector(o_self - o_target).show(target)
+        else:
+            t = target.origo()
+            s = self.origo()
+            return Vector(s - t).show(target)
 
     def move(self, d: VectorLike, frame: ReferenceFrame = None):
         """
