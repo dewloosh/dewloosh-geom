@@ -153,7 +153,7 @@ class CartesianFrame(ReferenceFrame):
         if self.parent is not None:
             self._origo += d.show(self.parent)
         else:
-            self._origo += d.show()
+            self._origo += d.show(self)
         return self
 
     def rotate(self, *args, **kwargs):

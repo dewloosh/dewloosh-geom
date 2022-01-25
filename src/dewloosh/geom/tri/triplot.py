@@ -2,8 +2,8 @@
 from dewloosh.geom.tri.triang import triobj_to_mpl, get_triobj_data, \
     triangulate
 from dewloosh.geom.tri.triutils import offset_tri
-from dewloosh.geom.utils import cell_coords_bulk, explode_mesh_data_bulk
-from dewloosh.core.tools.typing import issequence
+from dewloosh.geom.utils import cells_coords, explode_mesh_data_bulk
+from dewloosh.core.tools import issequence
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -84,7 +84,7 @@ def triplot_geom(triobj, ax, *args, lw=0.5, marker='b-',
         else:
             axobj = ax.triplot(tri, marker, lw=lw, **kwargs)
     else:
-        cellcoords = cell_coords_bulk(points, triangles)
+        cellcoords = cells_coords(points, triangles)
         axobj = TriPatchCollection(cellcoords, fc=fcolor, ec=ecolor, lw=lw)
         ax.add_collection(axobj)
     _decorate_(fig=fig, ax=ax, points=points, title=title,

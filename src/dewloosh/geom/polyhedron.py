@@ -32,6 +32,7 @@ class TetraHedron(PolyHedron):
 
     NNODE = 4
     vtkCellType = 10
+    __label__ = 'TET4'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,6 +45,7 @@ class HexaHedron(PolyHedron):
 
     NNODE = 8
     vtkCellType = 12
+    __label__ = 'H8'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,6 +55,7 @@ class TriquadraticHexaHedron(PolyHedron):
 
     NNODE = 27
     vtkCellType = 29
+    __label__ = 'H27'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -62,6 +65,7 @@ class Wedge(PolyHedron):
 
     NNODE = 6
     vtkCellType = 13
+    __label__ = 'W6'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -71,6 +75,7 @@ class BiquadraticWedge(PolyHedron):
 
     NNODE = 18
     vtkCellType = 32
+    __label__ = 'W18'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -4,8 +4,7 @@
 import numpy as np
 from numba import njit, prange
 from dewloosh.geom.tri.triutils import edges_tri
-from dewloosh.geom.utils import cell_coords_bulk, \
-    detach_mesh_bulk as detach_mesh
+from dewloosh.geom.utils import cell_coords_bulk
 from dewloosh.geom.topo.topodata import edges_Q4, edges_H8, faces_H8
 from dewloosh.geom.topo import unique_topo_data
 from typing import Union, Sequence
@@ -28,7 +27,7 @@ __all__ = [
 DataLike = Union[ndarray, Sequence[ndarray]]
 
 
-def transform_topo(topo: ndarray, path: ndarray, data: ndarray = None,
+def transform_topo(topo: ndarray, path: ndarray, data: ndarray=None,
                    *args, MT=True, max_workers=4, **kwargs):
     nD = len(path.shape)
     if nD == 1:
@@ -96,8 +95,25 @@ def T3_to_T6(coords: ndarray, topo: ndarray):
     return coords, topo
 
 
+def T6_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,
+             *args, path: ndarray=None, decimate=True, **kwargs):
+    if isinstance(path, ndarray):
+        assert path.shape[1] == 3
+    else:
+        if path is None:
+            if decimate:
+                path = np.array([[0, 3, 5], [3, 1, 4], 
+                                 [5, 4, 2], [5, 3, 4]], dtype=topo.dtype)
+            else:
+                path = np.array([[0, 1, 2]], dtype=topo.dtype)
+    if data is None:
+        return coords, + transform_topo(topo, path, *args, **kwargs)
+    else:
+        return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
+
+"""
 def T6_to_T3(coords: ndarray, topo: ndarray, *args,
-             path: ndarray = None, edata=None, decimate=True,
+             path: ndarray=None, edata=None, decimate=True,
              return_inverse=False, **kwargs):
     if edata is not None:
         assert isinstance(edata, ndarray), \
@@ -128,7 +144,7 @@ def T6_to_T3_h(coords: ndarray, topo: ndarray, path: ndarray):
             for k in prange(3):
                 topoT3[n + j, k] = topo[iE, path[j, k]]
     return coords, topoT3
-
+"""
 
 def Q4_to_Q8(coords: ndarray, topo: ndarray):
     nP = len(coords)

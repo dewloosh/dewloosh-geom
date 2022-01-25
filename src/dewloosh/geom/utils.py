@@ -3,12 +3,138 @@ import numpy as np
 from numpy import ndarray
 from numpy.linalg import norm
 from numba import njit, prange
+from numba.typed import Dict as nbDict
+from numba import types as nbtypes
 from dewloosh.math.array import matrixform
 from dewloosh.geom.topo import remap_topo
+from dewloosh.math.linalg.sparse import JaggedArray
+from dewloosh.math.linalg.sparse.csr import csr_matrix
 __cache = True
 
 
-def index_of_closest_point(coords: ndarray, target: ndarray):
+nbint64 = nbtypes.int64
+nbint64A = nbint64[:]
+nbfloat64A = nbtypes.float64[:]
+
+
+def cells_around(centers: np.ndarray, r_max: float, *args,
+                 frmt='dict', MT=True, n_max:int=10, **kwargs):
+    if MT:
+        data, widths = _cells_around_MT_(centers, r_max, n_max)    
+    else:
+        raise NotImplementedError
+    if frmt == 'dict':
+        return _cells_data_to_dict(data, widths)
+    elif frmt == 'jagged':
+        return _cells_data_to_jagged(data, widths)
+    elif frmt == 'csr':
+        d = _cells_data_to_dict(data, widths)
+        data, inds, indptr, shp = _dict_to_spdata(d, widths)
+        return csr_matrix(data=data, indices=inds, 
+                          indptr=indptr, shape=shp)
+    raise RuntimeError("Unhandled case!")
+
+
+@njit(nogil=True, cache=__cache)
+def _dict_to_spdata(d: dict, widths: np.ndarray):
+    N = int(np.sum(widths))
+    nE = len(widths)
+    data = np.zeros(N, dtype=np.int64)
+    inds = np.zeros_like(data)
+    indptr = np.zeros(nE+1, dtype=np.int64)
+    _c = 0
+    wmax = 0
+    for i in range(len(d)):
+        w = widths[i]
+        if w > wmax:
+            wmax = w
+        c_ = _c + w
+        data[_c: c_] = d[i]
+        inds[_c: c_] = np.arange(w)
+        indptr[i+1] = c_
+        _c = c_
+    return data, inds, indptr, (nE, wmax)
+
+
+@njit(nogil=True, cache=__cache)
+def _jagged_to_spdata(ja: JaggedArray):
+    widths = ja.widths()
+    N = int(np.sum(widths))
+    nE = len(widths)
+    data = np.zeros(N, dtype=np.int64)
+    inds = np.zeros_like(data)
+    indptr = np.zeros(nE+1, dtype=np.int64)
+    _c = 0
+    wmax = 0
+    for i in range(len(ja)):
+        w = widths[i]
+        if w > wmax:
+            wmax = w
+        c_ = _c + w
+        data[_c: c_] = ja[i]
+        inds[_c: c_] = np.arange(w)
+        indptr[i+1] = c_
+        _c = c_
+    return data, inds, indptr, (nE, wmax)
+
+
+@njit(nogil=True, fastmath=True, cache=__cache)
+def _cells_data_to_dict(data: np.ndarray, widths: np.ndarray) -> nbDict:
+    dres = dict()
+    nE = len(widths)
+    for iE in range(nE):
+        dres[iE] = data[iE, :widths[iE]]
+    return dres
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def _flatten_jagged_data(data, widths) -> ndarray:
+    nE = len(widths)
+    inds = np.zeros(nE + 1, dtype=widths.dtype)
+    inds[1:] = np.cumsum(widths)
+    res = np.zeros(np.sum(widths))
+    for i in prange(nE):
+        res[inds[i] : inds[i+1]] = data[i, :widths[i]]
+    return res
+
+
+def _cells_data_to_jagged(data, widths):
+    data = _flatten_jagged_data(data, widths)
+    return JaggedArray(data, cuts=widths)
+
+
+@njit(nogil=True, cache=__cache)
+def _cells_around_(centers: np.ndarray, r_max: float):
+    res = nbDict.empty(
+        key_type=nbint64,
+        value_type=nbint64A,
+    )
+    nE = len(centers)
+    normsbuf = np.zeros(nE, dtype=centers.dtype)
+    widths = np.zeros(nE, dtype=np.int64)
+    for iE in range(nE):
+        normsbuf[:] = norms(centers - centers[iE])
+        res[iE] = np.where(normsbuf <= r_max)[0]
+        widths[iE] = len(res[iE])
+    return res, widths
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def _cells_around_MT_(centers: np.ndarray, r_max: float, n_max: int=10):
+    nE = len(centers)
+    res = np.zeros((nE, n_max), dtype=np.int64)
+    widths = np.zeros(nE, dtype=np.int64)
+    for iE in prange(nE):
+        inds = np.where(norms(centers - centers[iE]) <= r_max)[0]
+        if inds.shape[0] <= n_max:
+            res[iE, :inds.shape[0]] = inds
+        else:
+            res[iE, :] = inds[:n_max]
+        widths[iE] = len(res[iE])
+    return res, widths
+
+
+def index_of_closest_point(coords: ndarray, target: ndarray) -> int:
     """
     Returs the index of the closes point to a target.
     
@@ -33,8 +159,65 @@ def index_of_closest_point(coords: ndarray, target: ndarray):
     return np.argmin(norm(coords - target, axis=1))
 
 
+def points_of_cells(coords: ndarray, topo: ndarray, *args, 
+                    local_axes=None, centralize=True, **kwargs) -> ndarray:
+    """
+    Returns coordinates of the cells from a pointset and a topology.
+    If coordinate frames are provided, the coorindates are returned with
+    respect to those frames.
+    
+    Parameters
+    ----------
+    coords : (nP, nD) numpy.ndarray
+        2d float array of vertex coordinates.
+            nP : number of points in the model
+            nD : number of dimensions of the model space
+            
+    topo : (nE, nNE) numpy.ndarray
+        A 2D array of vertex indices. The i-th row contains the vertex indices
+        of the i-th element.
+            nE : number of elements
+            nNE : number of nodes per element
+            
+    local_axes : (..., 3, 3) numpy.ndarray
+        Reference frames. A single 3x3 numpy array or matrices for all elements
+        in 'topo' must be provided.
+            
+    centralize : bool
+        If True, and 'frame' is not None, the local coordinates are returned
+        with respect to the geometric center of each element.
+    
+    Notes
+    -----
+    It is assumed that all entries in 'coords' are coordinates of
+    points in the same frame.
+    """
+    if local_axes is not None:
+        return cells_coords_tr(cells_coords(coords, topo), 
+                               local_axes, centralize=centralize)
+    else:
+        return cells_coords(coords, topo)
+    
+    
 @njit(nogil=True, parallel=True, cache=__cache)
-def cell_coords_bulk(coords: ndarray, topo: ndarray) -> ndarray:
+def cells_coords_tr(ecoords: ndarray, local_axes: ndarray, 
+                    centralize=True) -> ndarray:
+    nE, nNE, _ = ecoords.shape
+    res = np.zeros_like(ecoords)
+    for i in prange(nE):
+        if centralize:
+            cc = cell_center(ecoords[i])
+            ecoords[i, :, 0] -= cc[0]
+            ecoords[i, :, 1] -= cc[1]
+            ecoords[i, :, 2] -= cc[2]
+        dcm = local_axes[i]
+        for j in prange(nNE):
+            res[i, j, :] = dcm @ ecoords[i, j, :]
+    return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def cells_coords(coords: ndarray, topo: ndarray) -> ndarray:
     """Returns coordinates of multiple cells.
 
     Returns coordinates of cells from a coordinate base array and
@@ -81,6 +264,9 @@ def cell_coords_bulk(coords: ndarray, topo: ndarray) -> ndarray:
         for iNE in prange(nNE):
             res[iE, iNE] = coords[topo[iE, iNE]]
     return res
+
+
+cell_coords_bulk = cells_coords
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
@@ -149,7 +335,7 @@ def cell_center_2d(ecoords: np.ndarray):
 
 
 @njit(nogil=True, cache=__cache)
-def cell_center(ecoords: np.ndarray):
+def cell_center(coords: np.ndarray):
     """Returns the center of a general cell.
 
     Parameters
@@ -163,8 +349,8 @@ def cell_center(ecoords: np.ndarray):
     numpy.ndarray
         1d coordinate array
     """
-    return np.array([np.mean(ecoords[:, 0]), np.mean(ecoords[:, 1]),
-                     np.mean(ecoords[:, 2])], dtype=ecoords.dtype)
+    return np.array([np.mean(coords[:, 0]), np.mean(coords[:, 1]),
+                     np.mean(coords[:, 2])], dtype=coords.dtype)
 
 
 def cell_center_bulk(coords: ndarray, topo: ndarray) -> ndarray:
@@ -397,6 +583,15 @@ def pcoords_to_coords(pcoords: ndarray, ecoords: ndarray):
             res[iE * nP + jP] = ecoords[iE, 0] * (1-pcoords[jP]) \
                 + ecoords[iE, -1] * pcoords[jP]
     return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def norms(a: np.ndarray):
+    nI = len(a)
+    res = np.zeros(nI, dtype=a.dtype)
+    for iI in prange(len(a)):
+        res[iI] = np.dot(a[iI], a[iI])
+    return np.sqrt(res)
 
 
 

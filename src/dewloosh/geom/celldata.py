@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from dewloosh.core.typing.wrap import Wrapper
+from dewloosh.core.abc.wrap import Wrapper
 from dewloosh.geom.utils import avg_cell_data
 
 
@@ -8,7 +8,7 @@ class CellData(Wrapper):
     def __init__(self, *args, pointdata=None, celldata=None,
                  wrap=None, **kwargs):
         if celldata is not None:
-            wrap = celldata
+            wrap=celldata
         super().__init__(*args, wrap=wrap, **kwargs)
         self.pointdata = pointdata
 

@@ -3,7 +3,7 @@ from dewloosh.core import Library
 from dewloosh.math.linalg import Vector, VectorBase
 from dewloosh.math.linalg import ReferenceFrame as FrameLike
 from dewloosh.geom.space import CartesianFrame
-from dewloosh.geom.utils import cell_coords_bulk, \
+from dewloosh.geom.utils import cells_coords, cells_around,\
     detach_mesh_bulk as detach_mesh, cell_center_bulk
 from dewloosh.geom.vtkutils import mesh_to_vtk
 from dewloosh.geom.polygon import Triangle
@@ -13,6 +13,7 @@ from dewloosh.geom.utils import index_of_closest_point, nodal_distribution_facto
 from dewloosh.geom.topo import regularize, nodal_adjacency, cells_at_nodes
 from dewloosh.geom.space import PointCloud
 from dewloosh.geom.topo.topologyarray import TopologyArray
+from dewloosh.math.array import atleast3d, repeat
 import awkward as ak
 from typing import Iterable
 from copy import copy
@@ -33,7 +34,9 @@ except Exception:
 
 def gen_frame(coords): return CartesianFrame(dim=coords.shape[1])
 
+
 VectorLike = Union[Vector, ndarray]
+
 
 class PolyData(Library):
     
@@ -42,7 +45,7 @@ class PolyData(Library):
     """
 
     def __init__(self, *args, coords=None, topo=None, celltype=None,
-                 frame: FrameLike=None, **kwargs):
+                 frame: FrameLike=None, newaxis: int=2, **kwargs):
         super().__init__(*args, **kwargs)
         self.pointdata = None
         self.celldata = None
@@ -62,17 +65,18 @@ class PolyData(Library):
             if isinstance(coords, np.ndarray):
                 nP, nD = coords.shape
                 if nD == 2:
+                    inds = [0, 1, 2]
+                    inds.pop(newaxis)
                     if isinstance(frame, FrameLike):
                         if len(frame) == 3:
                             _c = np.zeros((nP, 3))
-                            _c[:, :2] = coords
+                            _c[:, inds] = coords
                             coords = _c
-                            coords = PointCloud(coords, frame=frame).view()
+                            coords = PointCloud(coords, frame=frame).show()
                         elif len(frame) == 2:
-                            coords = PointCloud(
-                                coords[:, :2], frame=frame).view()
+                            coords = PointCloud(coords, frame=frame).show()
                 elif nD == 3:
-                    coords = PointCloud(coords, frame=frame).view()
+                    coords = PointCloud(coords, frame=frame).show()
                 activity = np.ones(nP, dtype=bool)
                 self.pointdata = ak.zip(
                     {'x': coords, 'active': activity}, depth_limit=1)
@@ -129,7 +133,26 @@ class PolyData(Library):
         else:
             f = self._frame
             return f if f is not None else self.parent.frame
-
+    
+    @property
+    def frames(self):
+        if self.celldata is not None and 'frames' in self.celldata.fields:
+            return self.celldata.frames.to_numpy()
+    
+    @frames.setter        
+    def frames(self, value):
+        assert self.celldata is not None
+        if isinstance(value, ndarray):
+            value = atleast3d(value)
+            if len(value) == 1:
+                value = repeat(value[0], len(self.celldata._wrapped))
+            else:
+                assert len(value) == len(self.celldata._wrapped)                
+            self.celldata._wrapped['frames'] = value
+        else:
+            raise TypeError(('Type {} is not a supported' + \
+                ' type to specify frames.').format(type(value)))
+        
     def points(self, *args, return_inds=False, **kwargs) -> PointCloud:
         if self.is_root():
             coords = self.pointdata.x.to_numpy()
@@ -159,13 +182,13 @@ class PolyData(Library):
         if self.is_root():
             pc = self.points()
             pc.move(v, frame)
-            self.pointdata['x'] = pc.show(self.frame)           
+            self.pointdata['x'] = pc.array           
         else:
             root = self.root()
             inds = np.unique(self.topology())
             pc = root.points()[inds]
             pc.move(v, frame)
-            root.pointdata['x'] = pc.show(self.frame)
+            root.pointdata['x'] = pc.array
         return self
     
     def rotate(self, *args, **kwargs):
@@ -196,10 +219,17 @@ class PolyData(Library):
                 return topo, np.concatenate(inds)
             else:
                 return topo
-
+            
     def cells_at_nodes(self, *args, **kwargs):
         topo = self.topology()
         return cells_at_nodes(topo, *args, **kwargs)
+    
+    def cells_around_cells(self, radius=None, frmt='dict'):
+        if radius is None:
+            # topology based
+            raise NotImplementedError
+        else:
+            return cells_around(self.centers(), radius, frmt=frmt)
 
     def nodal_adjacency_matrix(self, *args, **kwargs):
         topo = self.topology()
@@ -212,8 +242,9 @@ class PolyData(Library):
     def number_of_points(self):
         return len(self.root().pointdata)
 
-    def cellcoords(self, *args, **kwargs):
-        return cell_coords_bulk(self.root().coords(), self.topology(*args, **kwargs))
+    def cellcoords(self, *args, _topo=None, **kwargs):
+        _topo = self.topology() if _topo is None else _topo
+        return cells_coords(self.root().coords(), _topo)
 
     def center(self, target: FrameLike = None):
         if self.is_root():
@@ -262,6 +293,9 @@ class PolyData(Library):
 
     def index_of_closest_point(self, target, *args, **kwargs):
         return index_of_closest_point(self.coords(), target)
+    
+    def index_of_closest_cell(self, target, *args, **kwargs):
+        return index_of_closest_point(self.centers(), target)
 
     def set_nodal_distribution_factors(self, *args, assume_regular=False, key='ndf', **kwargs):
         volumes = self.volumes()
@@ -324,15 +358,13 @@ class PolyData(Library):
             raise ImportError
         if theme is not None:
             pv.set_plot_theme(theme)
+        poly = self.to_pv(deepcopy=deepcopy)
         if notebook:
-            pv.wrap(self.to_vtk(deepcopy)).plot(*args,
-                                                jupyter_backend=jupyter_backend,
-                                                show_edges=show_edges,
-                                                notebook=notebook, **kwargs)
+            poly.plot(*args, jupyter_backend=jupyter_backend, 
+                      show_edges=show_edges, notebook=notebook, **kwargs)
         else:
-            pv.wrap(self.to_vtk(deepcopy)).plot(*args,
-                                                show_edges=show_edges, notebook=notebook,
-                                                **kwargs)
+            poly.plot(*args, show_edges=show_edges, notebook=notebook,
+                      **kwargs)
 
     def __join_parent__(self, parent: Library):
         self.parent = parent

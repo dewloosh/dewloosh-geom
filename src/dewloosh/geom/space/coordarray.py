@@ -15,7 +15,6 @@ from numpy import ndarray
 import numpy as np
 from numba import njit, prange
 from typing import Union
-from collections import Iterable
 __cache = True
 
 
@@ -217,9 +216,8 @@ class PointCloud(Vector):
             A numpy array.
         
         """
-        arr = show_coords(self.frame.dcm(target=target), self.array)
-        dc = dcoords(arr, self.frame.origo(target))
-        buf = arr + dc
+        x = super().show(target)
+        buf = x + dcoords(x, self.frame.origo(target))
         return self._array_cls_(shape=buf.shape, buffer=buf, dtype=buf.dtype)
             
     def move(self, v : VectorLike, frame: FrameLike = None):

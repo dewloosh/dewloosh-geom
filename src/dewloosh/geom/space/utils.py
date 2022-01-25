@@ -2,7 +2,7 @@
 import numpy as np
 from numpy import ndarray
 from numba import njit, prange
-from dewloosh.core.squeeze import squeeze
+from dewloosh.core import squeeze
 from dewloosh.math.linalg import normalize
 from dewloosh.math.array import atleast2d
 from dewloosh.geom.utils import center_of_points, \
@@ -12,6 +12,24 @@ __cache = True
 
 @njit(nogil=True, cache=__cache)
 def frame_of_plane(coords: ndarray):
+    """
+    Returns the frame of a planar surface. It needs
+    at least 3 pointds to work properly (len(coords>=3)).
+    
+    It takes the center, the first point and a point from
+    the middle to form the coordinate axes.
+    
+    Parameters
+    ----------
+    coords : numpy.ndarray
+        2d coordinate array
+
+    Returns:
+    --------        
+    numpy.ndarray
+        3x3 global -> local DCM matrix 
+        
+    """
     tr = np.zeros((3, 3), dtype=coords.dtype)
     center = center_of_points(coords)
     tr[:, 0] = normalize(coords[0] - center)
@@ -99,11 +117,17 @@ def tr_cell_glob_to_loc_bulk(coords: np.ndarray, topo: np.ndarray):
 def _frames_of_lines_auto(coords: ndarray, topo: ndarray):
     nE, nNE = topo.shape
     nNE -= 1
+    i = np.array([1, 0, 0], dtype=coords.dtype)
     k = np.array([0, 0, 1], dtype=coords.dtype)
     tr = np.zeros((nE, 3, 3), dtype=coords.dtype)
     for iE in prange(nE):
         tr[iE, 0, :] = normalize(coords[topo[iE, nNE]] - coords[topo[iE, 0]])
-        tr[iE, 2, :] = normalize(k - tr[iE, 0, :] * np.dot(tr[iE, 0, :], k))
+        _dot = np.dot(k, tr[iE, 0, :])
+        if _dot > 0.9:
+            _dot = np.dot(i, tr[iE, 0, :])
+            tr[iE, 2, :] = normalize(i - tr[iE, 0, :] * _dot)
+        else:
+            tr[iE, 2, :] = normalize(k - tr[iE, 0, :] * _dot)
         tr[iE, 1, :] = np.cross(tr[iE, 2, :], tr[iE, 0, :])
     return tr
 

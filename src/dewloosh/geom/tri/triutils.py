@@ -135,12 +135,12 @@ def area_tri_bulk(ecoords: np.ndarray):
 
 
 @vectorize("f8(f8, f8, f8, f8, f8, f8)", target='parallel', cache=__cache)
-def area_tri_u(x1, y1, x2, y2, x3, y3: np.ndarray):
+def area_tri_u(x1, y1, x2, y2, x3, y3):
     return (x2*y3 - x3*y2 + x3*y1 - x1*y3 + x1*y2 - x2*y1)/2
 
 
 @vectorize("f8(f8, f8, f8, f8, f8, f8)", target='parallel', cache=__cache)
-def area_tri_u2(x1, x2, x3, y1, y2, y3: np.ndarray):
+def area_tri_u2(x1, x2, x3, y1, y2, y3):
     return (x2*y3 - x3*y2 + x3*y1 - x1*y3 + x1*y2 - x2*y1)/2
 
 
@@ -184,21 +184,51 @@ def nat_to_loc_tri(acoord: np.ndarray):
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
-def get_points_inside_triangles(points: ndarray, topo: ndarray, 
-                                coords: ndarray):
-    nE = topo.shape[0]
+def localize_points(points: ndarray, triangles: ndarray, 
+                    coords: ndarray):
+    nE = triangles.shape[0]
     nC = coords.shape[0]
-    ecoords = cell_coords_bulk(points, topo)
-    res = np.zeros(nC, dtype=np.int64)
+    ecoords = cell_coords_bulk(points, triangles)
+    res = np.full(nC, -1, dtype=triangles.dtype)
+    shp = np.zeros((nC, 3), dtype=points.dtype)
     for iC in prange(nC):
         for iE in prange(nE):
             nat = glob_to_nat_tri(coords[iC], ecoords[iE])
             if np.max(nat) <= 1.0:
-                res[iC] = 1
+                res[iC] = iE
+                shp[iC] = nat
                 break            
+    return res, shp
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def _get_points_inside_triangles(points: ndarray, topo: ndarray, 
+                                 coords: ndarray):
+    inds, _ = localize_points(points, topo, coords)
+    inds[inds > -1] = 1
+    inds[inds < 0] = 0           
+    return inds
+
+
+def get_points_inside_triangles(points: ndarray, topo: ndarray, coords: ndarray):
+    return _get_points_inside_triangles(points, topo, coords).astype(bool)
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def approx_data_to_points(points: ndarray, triangles: ndarray, 
+                          data: ndarray, coords: ndarray, defval=0.0):
+    nC = coords.shape[0]
+    nD = data.shape[1]
+    inds, shp = localize_points(points, triangles, coords)
+    res = np.full((nC, nD), defval, dtype=data.dtype)
+    for iC in prange(nC):
+        i = inds[iC]
+        if i > -1:
+            for j in prange(nD):
+                res[i, j] = np.sum(data[triangles[i], j] * shp[iC])
     return res
-
-
+            
+    
 def offset_tri(coords: np.ndarray, topo: np.ndarray, data: np.ndarray,
                *args, **kwargs):
     if isinstance(data, np.ndarray):
@@ -300,25 +330,39 @@ if __name__ == '__main__':
     from dewloosh.geom.space.utils import frames_of_surfaces, \
         is_planar_surface
     from dewloosh.math.array import ascont
+    from time import time
 
     points, triangles, triobj = triangulate(size=(800, 600),
-                                            shape=(10, 10))
+                                            shape=(100, 100))
     tricoords = cell_coords_bulk(points, triangles)
 
     area0 = 800 * 600
 
-    area1 = np.sum(area_tri_bulk(tricoords))
-
-    area2 = areas_tri(tricoords)
-
+    t0 = time()
+    for i in range(10):
+        area1 = np.sum(area_tri_bulk(tricoords))
+    print(time()-t0)
+    
+    t0 = time()
+    for i in range(10):
+        area2 = areas_tri(tricoords)
+    print(time()-t0)
+    
     x1 = tricoords[:, 0, 0]
     x2 = tricoords[:, 1, 0]
     x3 = tricoords[:, 2, 0]
     y1 = tricoords[:, 0, 1]
     y2 = tricoords[:, 1, 1]
     y3 = tricoords[:, 2, 1]
-    area3 = np.sum(area_tri_u2(x1, x2, x3, y1, y2, y3))
-
+    t0 = time()
+    for i in range(10):
+        area3 = np.sum(area_tri_u2(x1, x2, x3, y1, y2, y3))
+    print(time()-t0)
+    
+    for i in range(10):
+        area4 = np.sum(area_tri_u(x1, y1, x2, y2, y3, y3))
+    print(time()-t0)
+    
     tri_glob_to_loc(points, triangles)
     frames = frames_of_surfaces(points, triangles)
     normals = ascont(frames[:, 2, :])

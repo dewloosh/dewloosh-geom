@@ -4,15 +4,6 @@ from numba import njit, prange
 from dewloosh.geom.topo.tr import transform_topo
 from dewloosh.geom.utils import center_of_points
 from dewloosh.geom.polydata import PolyData
-from dewloosh.geom.polyhedron import TetraHedron as Tetra
-from dewloosh.geom.polygon import Triangle, QuadraticTriangle
-from dewloosh.geom.space.utils import frames_of_surfaces as frames, \
-    is_planar_surface as is_planar
-from dewloosh.geom.tet.tetutils import extrude_T3_TET4
-from dewloosh.geom.tri.triang import triangulate
-from dewloosh.math.array import ascont
-from dewloosh.geom.tri.triutils import edges_tri
-from dewloosh.geom.topo import unique_topo_data
 __cache = True
 
 

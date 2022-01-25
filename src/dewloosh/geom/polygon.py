@@ -49,6 +49,7 @@ class Triangle(PolyGon):
 
     NNODE = 3
     vtkCellType = 5
+    __label__ = 'T3'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,6 +77,7 @@ class QuadraticTriangle(PolyGon):
 
     NNODE = 6
     vtkCellType = 22
+    __label__ = 'T6'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -100,6 +102,7 @@ class Quadrilateral(PolyGon):
 
     NNODE = 4
     vtkCellType = 9
+    __label__ = 'Q4'
 
     def to_triangles(self, coords=None, topo=None, data=None):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
@@ -111,6 +114,7 @@ class BiQuadraticQuadrilateral(PolyGon):
 
     NNODE = 9
     vtkCellType = 28
+    __label__ = 'Q9'
 
     def to_triangles(self, coords=None, topo=None, data=None):
         coords = self.pointdata.x.to_numpy() if coords is None else coords

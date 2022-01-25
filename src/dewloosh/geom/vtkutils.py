@@ -3,7 +3,7 @@ import numpy as np
 try:
     import vtk
     from vtk.util.numpy_support import numpy_to_vtk as np2vtk, \
-    numpy_to_vtkIdTypeArray as np2vtkId
+        numpy_to_vtkIdTypeArray as np2vtkId
     __hasvtk__ = True
 except Exception:
     __hasvtk__ = False
