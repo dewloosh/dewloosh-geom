@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.space import frames_of_lines
 from dewloosh.geom.rgrid import rgridMT as grid
+from dewloosh.math.array import atleast3d
 import numpy as np
 from numpy import ndarray
 from numba import njit
@@ -12,8 +13,8 @@ __all__ = ['mesh1d_uniform']
 
 
 @njit(nogil=True, parallel=False, fastmath=True, cache=__cache)
-def _mesh1d_uniform_(coords: ndarray, topo: ndarray, eshape: ndarray, N: int, 
-                     frames: ndarray):
+def _mesh1d_uniform_(coords: ndarray, topo: ndarray, eshape: ndarray, 
+                     N: int, frames: ndarray):
     origo = np.zeros(1)
     subcoords_, subtopo_ = grid((1,), N, eshape, origo, 0)
     num_node_sub = len(subcoords_)
@@ -40,7 +41,7 @@ def _mesh1d_uniform_(coords: ndarray, topo: ndarray, eshape: ndarray, N: int,
 
 def mesh1d_uniform(coords: ndarray, topo: ndarray, eshape: ndarray, *args, 
                    N :int=2, refZ=None, return_frames=False, **kwargs):
-    frames = frames_of_lines(coords, topo, refZ)
+    frames = atleast3d(frames_of_lines(coords, topo, refZ))
     coords, topo, frames = _mesh1d_uniform_(coords, topo, eshape, N, frames)
     if return_frames:
         return coords, topo, frames
