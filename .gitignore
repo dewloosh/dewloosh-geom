@@ -132,3 +132,4 @@ dmypy.json
 .code-workspace
 _README.md
 working/
+.vscode
