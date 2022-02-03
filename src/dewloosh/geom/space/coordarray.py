@@ -303,12 +303,12 @@ class PointCloud(Vector):
         
         """
         if isinstance(args[0], FrameLike):
-            self._array = (self.frame.dcm(target=args[0]) @ self.array.T).T
+            self._array = self.show(args[0])
             return self
         else:
             target = self.frame.orient_new(*args, **kwargs)
-            return self.rotate(target)            
-
+            return self.rotate(target)
+        
 
 class PointCloudType(nbtypes.Type):
     """Numba type."""
