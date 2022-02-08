@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.utils import lengths_of_lines
+from dewloosh.geom.utils import lengths_of_lines, lengths_of_lines2
 from dewloosh.geom.cell import PolyCell1d
 import numpy as np
 from numba import njit, prange
@@ -42,6 +42,27 @@ def dshp_bulk(pcoords: ndarray):
     for iP in prange(nP):
         res[iP, :] = dshp(pcoords[iP])
     return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def jacobian_det_bulk_1d(jac: ndarray):
+    nE, nG = jac.shape[:2]
+    res = np.zeros((nE, nG), dtype=jac.dtype)
+    for iE in prange(nE):
+        res[iE, :] = jac[iE, :, 0, 0]
+    return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def jacobian_matrix_bulk_1d(dshp: ndarray, ecoords: ndarray):
+    lengths = lengths_of_lines2(ecoords)
+    nE = ecoords.shape[0]
+    nG = dshp.shape[0]
+    res = np.zeros((nE, nG, 1, 1), dtype=dshp.dtype)
+    for iE in prange(nE):
+        res[iE, :, 0, 0] = lengths[iE] / 2
+    return res
+
 
 
 class Line(PolyCell1d):
@@ -87,3 +108,9 @@ class Line(PolyCell1d):
             return lengths * areas
         else:
             return lengths
+        
+    def jacobian_matrix(self, *args, dshp=None, ecoords=None, **kwargs):
+        return jacobian_matrix_bulk_1d(dshp, ecoords)
+    
+    def jacobian(self, *args, jac=None, **kwargs):
+        return jacobian_det_bulk_1d(jac)
