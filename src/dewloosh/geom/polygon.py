@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.utils import cell_coords_bulk
-from dewloosh.geom.tri.triutils import area_tri_bulk
-from dewloosh.geom.topo.tr import T6_to_T3, Q4_to_T3, \
-    Q9_to_Q4, T3_to_T6
-from dewloosh.geom.cell import PolyCell2d
 import numpy as np
+
+from .utils import cells_coords
+from .tri.triutils import area_tri_bulk
+from .topo.tr import T6_to_T3, Q4_to_T3, Q9_to_Q4, T3_to_T6
+from .cell import PolyCell2d
 
 
 class PolyGon(PolyCell2d):
@@ -27,7 +27,7 @@ class PolyGon(PolyCell2d):
     def areas(self, *args, coords=None, topo=None, **kwargs):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
         topo = self.nodes.to_numpy() if topo is None else topo
-        areas = area_tri_bulk(cell_coords_bulk(
+        areas = area_tri_bulk(cells_coords(
             *self.to_triangles(coords, topo)))
         res = np.sum(areas.reshape(topo.shape[0], int(
             len(areas)/topo.shape[0])), axis=1)
@@ -70,7 +70,7 @@ class Triangle(PolyGon):
     def areas(self, *args, coords=None, topo=None, **kwargs):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
         topo = self.nodes.to_numpy() if topo is None else topo
-        return area_tri_bulk(cell_coords_bulk(coords, topo))
+        return area_tri_bulk(cells_coords(coords, topo))
 
 
 class QuadraticTriangle(PolyGon):

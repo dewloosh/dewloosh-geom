@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.utils import cell_coords_bulk, cell_coords
-from dewloosh.math.linalg import normalize, norm
 import numpy as np
 from numpy import ndarray
 from numba import njit, prange, vectorize
+
+from dewloosh.math.linalg import normalize, norm
+from ..utils import cells_coords, cell_coords
+
 __cache = True
 
 
@@ -188,7 +190,7 @@ def localize_points(points: ndarray, triangles: ndarray,
                     coords: ndarray):
     nE = triangles.shape[0]
     nC = coords.shape[0]
-    ecoords = cell_coords_bulk(points, triangles)
+    ecoords = cells_coords(points, triangles)
     res = np.full(nC, -1, dtype=triangles.dtype)
     shp = np.zeros((nC, 3), dtype=points.dtype)
     for iC in prange(nC):
@@ -246,7 +248,7 @@ def offset_tri(coords: np.ndarray, topo: np.ndarray, data: np.ndarray,
 
 @njit(nogil=True, cache=__cache)
 def offset_tri_uniform(coords: np.ndarray, topo: np.ndarray, alpha=0.9):
-    cellcoords = cell_coords_bulk(coords, topo)
+    cellcoords = cells_coords(coords, topo)
     ncenter = ncenter_tri(coords.dtype)
     eye = np.eye(3, dtype=coords.dtype)
     ncoords = ncenter + (eye - ncenter) * alpha
@@ -260,7 +262,7 @@ def offset_tri_uniform(coords: np.ndarray, topo: np.ndarray, alpha=0.9):
 
 @njit(nogil=True, parallel=True, cache=__cache)
 def _offset_tri_(coords: np.ndarray, topo: np.ndarray, alpha: np.ndarray):
-    cellcoords = cell_coords_bulk(coords, topo)
+    cellcoords = cells_coords(coords, topo)
     ncenter = ncenter_tri()
     dn = (np.eye(3, dtype=coords.dtype) - ncenter)
     nE = len(topo)
@@ -334,7 +336,7 @@ if __name__ == '__main__':
 
     points, triangles, triobj = triangulate(size=(800, 600),
                                             shape=(100, 100))
-    tricoords = cell_coords_bulk(points, triangles)
+    tricoords = cells_coords(points, triangles)
 
     area0 = 800 * 600
 

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.celldata import CellData
-from dewloosh.geom.utils import jacobian_matrix_bulk
 import numpy as np
+
+from .celldata import CellData
+from .utils import jacobian_matrix_bulk
 
 
 class PolyCell(CellData):

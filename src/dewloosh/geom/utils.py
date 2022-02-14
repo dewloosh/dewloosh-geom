@@ -5,22 +5,176 @@ from numpy.linalg import norm
 from numba import njit, prange
 from numba.typed import Dict as nbDict
 from numba import types as nbtypes
+import scipy as sp
+from packaging import version
+import warnings
+
 from dewloosh.math.array import matrixform
-from dewloosh.geom.topo import remap_topo
 from dewloosh.math.linalg.sparse import JaggedArray
 from dewloosh.math.linalg.sparse.csr import csr_matrix
-__cache = True
 
+
+try:
+    import sklearn
+    __has_sklearn__ = True
+except Exception:
+    __has_sklearn__ = False
+
+__scipy_version__ = sp.__version__
+__cache = True
 
 nbint64 = nbtypes.int64
 nbint64A = nbint64[:]
 nbfloat64A = nbtypes.float64[:]
 
 
-def cells_around(centers: np.ndarray, r_max: float, *args,
-                 frmt='dict', MT=True, n_max:int=10, **kwargs):
+def k_nearest_neighbours(X: ndarray, Y: ndarray=None, *args, backend='scipy', 
+                         k=1, workers=-1, tree_kwargs=None, query_kwargs=None, 
+                         leaf_size=30, return_distance=False, 
+                         max_distance=None, **kwargs):
+    """
+    Returns the k nearest neighbours (KNN) of a KDTree for a pointcloud using `scipy`
+    or `sklearn`. The function acts as a uniform interface for similar functionality
+    of `scipy` and `sklearn`. The most important parameters are highlighted, for the 
+    complete list of arguments, see the corresponding docs:
+    
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
+        
+        https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KDTree.html  
+    
+    To learn more about nearest neighbour searches in general:
+    
+        https://scikit-learn.org/stable/modules/neighbors.html
+    
+    Parameters
+    ----------
+    X : numpy.ndarray
+        An array of points to build the tree.
+        
+    Y : numpy.ndarray, Optional
+        An array of sampling points to query the tree. If None it is the
+        same as the points used to build the tree. Default is None. 
+        
+    k : int or Sequence[int], optional
+        Either the number of nearest neighbors to return, 
+        or a list of the k-th nearest neighbors to return, starting from 1.
+    
+    leaf_size : positive int, Optional
+        The number of points at which the algorithm switches over to brute-force.
+        Default is 10.
+    
+    workers : int, optional
+        Only if backend is 'scipy'.
+        Number of workers to use for parallel processing. If -1 is given all 
+        CPU threads are used. Default: -1.
+        
+        New in 'scipy' version 1.6.0.
+        
+    max_distance : float, Optional
+        Return only neighbors within this distance. It can be a single value, or 
+        an array of values of shape matching the input, while a None value
+        translates to an infinite upper bound.
+        Default is None.
+        
+    tree_kwargs : dict, Optional
+        Extra keyword arguments passed to the KDTree creator of the selected
+        backend. Default is None.
+        
+    tree_kwargs : dict, Optional
+        Extra keyword arguments passed to the query function of the selected
+        backend. Default is None.
+        
+        
+    Returns
+    -------
+    d : float or array of floats
+        The distances to the nearest neighbors. Only returned if
+        `return_distance==True`.
+        
+    i : integer or array of integers
+        The index of each neighbor.
+        
+    Examples
+    --------
+    >>> from dewloosh.geom.rgrid import Grid
+    >>> from dewloosh.geom import KNN
+    >>> size = 80, 60, 20
+    >>> shape = 10, 8, 4
+    >>> grid = Grid(size=size, shape=shape, eshape='H8')
+    >>> X = grid.centers()
+    >>> i, d = KNN(X, X, k=3, max_distance=10.0)
+       
+    """
+    tree_kwargs = {} if tree_kwargs is None else tree_kwargs
+    query_kwargs = {} if query_kwargs is None else query_kwargs
+    if backend=='scipy':
+        from scipy.spatial import KDTree
+        tree = KDTree(X, leafsize=leaf_size, **tree_kwargs)
+        max_distance = np.inf if max_distance is None else max_distance
+        query_kwargs['distance_upper_bound'] = max_distance
+        if version.parse(__scipy_version__) < version.parse("1.6.0"):
+            warnings.warn("Multithreaded execution of a KNN search is " + \
+                "running on a single thread in scipy<1.6.0. Install a newer" + \
+                "version or use `backend=sklearn` if scikit is installed.")
+            d, i = tree.query(Y, k=k, **query_kwargs)
+        else:
+            d, i = tree.query(Y, k=k, workers=workers)
+    elif backend=='sklearn':
+        if not __has_sklearn__:
+            raise ImportError("'sklearn' must be installed for this!")
+        from sklearn.neighbors import KDTree
+        tree = KDTree(X, leaf_size=leaf_size, **tree_kwargs)
+        if max_distance is None:
+            d, i = tree.query(Y, k=k, **query_kwargs)
+        else:
+            r = max_distance
+            d, i = tree.query_radius(Y, r, k=k, **query_kwargs)
+    else:
+        raise NotImplementedError
+    return d, i if return_distance else i
+
+    
+def cells_around(*args, **kwargs):
+    return points_around(*args, **kwargs)
+
+
+def points_around(points: np.ndarray, r_max: float, *args,
+                  frmt='dict', MT=True, n_max:int=10, **kwargs):
+    """
+    Returns neighbouring points for each entry in `points` that are
+    closer than the distance `r_max`. The results are returned in
+    diffent formats, depending on the format specifier argument `frmt`.
+    
+    Parameters
+    ----------
+    points : numpy.ndarray
+        Coordinates of several points as a 2d float numpy array.
+        
+    r_max : float
+        Maximum distance.
+    
+    n_max: int, Optional
+        Maximum number of neighbours. Default is 10.
+        
+    frmt : str
+        A string specifying the output format. Valid options are
+        'jagged', 'csr' and 'dict'. 
+        See below for the details on the returned object.
+        
+    Returns
+    -------
+    if frmt == 'csr'
+        dewloosh.math.linalg.sparse.csr.csr_matrix
+            A numba-jittable sparse matrix format.                      
+    elif frmt == 'dict'
+        numba Dict(int : int[:])
+    elif frmt == 'jagged'
+        dewloosh.math.linalg.sparse.JaggedArray
+            A subclass of `awkward.Array`
+   
+    """
     if MT:
-        data, widths = _cells_around_MT_(centers, r_max, n_max)    
+        data, widths = _cells_around_MT_(points, r_max, n_max)    
     else:
         raise NotImplementedError
     if frmt == 'dict':
@@ -404,61 +558,6 @@ def collect_nodal_data(celldata: ndarray, topo: ndarray, N: int):
         for jNE in prange(nNE):
             res[topo[iE, jNE]] += celldata[iE, jNE]
     return res
-
-
-@njit(nogil=True, cache=__cache)
-def inds_to_invmap_as_dict(inds: np.ndarray):
-    """
-    Returns a mapping that maps global indices to local ones.
-
-    Parameters
-    ----------
-    inds : numpy.ndarray
-        An array of global indices.
-
-    Returns
-    -------
-    dict
-        Mapping from global to local.
-    """
-    res = dict()
-    for i in range(len(inds)):
-        res[inds[i]] = i
-    return res
-
-
-@njit(nogil=True, parallel=True, cache=__cache)
-def inds_to_invmap_as_array(inds: np.ndarray):
-    """
-    Returns a mapping that maps global indices to local ones
-    as an array.
-
-    Parameters
-    ----------
-    inds : numpy.ndarray
-        An array of global indices.
-
-    Returns
-    -------
-    numpy.ndarray
-        Mapping from global to local.
-    """
-    res = np.zeros(inds.max() + 1, dtype=inds.dtype)
-    for i in prange(len(inds)):
-        res[inds[i]] = i
-    return res
-
-
-@njit(nogil=True, cache=__cache)
-def detach_mesh_bulk(coords: ndarray, topo: ndarray):
-    """
-    Given a topology array and the coordinate array it refers to, 
-    the function returns the coordinate array of the points involved 
-    in the topology, and a new topology array, with indices referencing 
-    the new coordinate array. 
-    """
-    inds = np.unique(topo)
-    return coords[inds], remap_topo(topo, inds_to_invmap_as_dict(inds))
 
 
 @njit(nogil=True, parallel=True, cache=__cache)

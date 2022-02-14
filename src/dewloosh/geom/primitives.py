@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom import PolyData
-from dewloosh.solid.fem import H8, TET4
-from dewloosh.geom.space import CartesianFrame
 import numpy as np
 from numpy import ndarray
+
+from .polydata import PolyData
+from .cells import H8, TET4
+from .space import CartesianFrame
+
 
 
 def Cylinder(shape, size=None, *args, regular=True, voxelize=False, 

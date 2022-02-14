@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from dewloosh.core.abc.wrap import Wrapper
-from dewloosh.geom.utils import avg_cell_data
+from .utils import avg_cell_data
 
 
 class CellData(Wrapper):

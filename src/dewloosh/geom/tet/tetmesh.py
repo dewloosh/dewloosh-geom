@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.polydata import PolyData
-from dewloosh.geom.polyhedron import TetraHedron as Tetra
+from ..polydata import PolyData
+from ..cells import Tetra
 import numpy as np
 
 
@@ -28,6 +28,7 @@ class TetMesh(PolyData):
                 raise NotImplementedError
         assert celltype is not None
         super().__init__(*args, celltype=celltype, topo=topo, **kwargs)
+        
         
 if __name__ == '__main__': 
     pass

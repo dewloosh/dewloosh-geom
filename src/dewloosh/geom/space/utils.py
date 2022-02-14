@@ -2,11 +2,12 @@
 import numpy as np
 from numpy import ndarray
 from numba import njit, prange
+
 from dewloosh.core import squeeze
 from dewloosh.math.linalg import normalize
 from dewloosh.math.array import atleast2d
-from dewloosh.geom.utils import center_of_points, \
-    cell_center, cell_coords
+from ..utils import center_of_points, cell_center, cell_coords
+    
 __cache = True
 
 

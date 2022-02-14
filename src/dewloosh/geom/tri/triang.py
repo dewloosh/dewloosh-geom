@@ -3,8 +3,10 @@ import numpy as np
 import matplotlib.tri as tri
 import scipy.spatial
 from scipy.spatial.qhull import Delaunay as spDelaunay
-from dewloosh.geom.topo import unique_topo_data
-from dewloosh.geom.tri.triutils import edges_tri
+
+from ..topo import unique_topo_data
+from .triutils import edges_tri
+
 try:
     from vtk import vtkIdList
     __hasvtk__ = True
@@ -15,6 +17,7 @@ try:
     __haspyvista__ = True
 except Exception:
     __haspyvista__ = False
+
 
 __all__ = ['triangulate']
  
@@ -218,6 +221,23 @@ def is_triobj(triobj):
     
 
 def circular_disk(nangles, nradii, rmin, rmax):
+    """
+    Returns the triangulation of a circular disk.
+    
+    Parameters
+    ----------
+    nangles : int
+        Number of subdivisions in radial direction.
+        
+    nradii : int
+        Number of subdivisions in circumferential direction.
+        
+    rmin : float
+        Inner radius. Can be zero.
+    
+    rmax : float
+        Outer radius.
+    """
     radii = np.linspace(rmin, rmax, nradii)
     angles = np.linspace(0, 2 * np.pi, nangles, endpoint=False)
     angles = np.repeat(angles[..., np.newaxis], nradii, axis=1)

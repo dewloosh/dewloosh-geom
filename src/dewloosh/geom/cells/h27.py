@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.polyhedron import TriquadraticHexaHedron
 from dewloosh.math.numint import GaussPoints as Gauss
-from dewloosh.geom.utils import cell_coords_bulk
+from dewloosh.geom.utils import cells_coords
 from numba import njit, prange
 import numpy as np
 from numpy import ndarray
@@ -321,6 +321,6 @@ class H27(TriquadraticHexaHedron):
     def volumes(self, coords=None, topo=None):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
         topo = self.nodes.to_numpy() if topo is None else topo
-        ecoords = cell_coords_bulk(coords, topo)
+        ecoords = cells_coords(coords, topo)
         qpos, qweight = Gauss(3, 3, 3)
         return volumes_H27(ecoords, qpos, qweight)

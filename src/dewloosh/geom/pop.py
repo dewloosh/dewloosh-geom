@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from numba import njit
-from dewloosh.geom.tri.triutils import edges_tri
-from dewloosh.geom.topo import unique_topo_data
+
 from dewloosh.math.array import tile
+
+from .tri.triutils import edges_tri
+from .topo import unique_topo_data
+
 __cache = True
 
 

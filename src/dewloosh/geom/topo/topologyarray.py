@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from dewloosh.math.linalg.sparse.utils import count_cols
-from dewloosh.math.arraysetops import unique2d
 import numpy as np
 from numpy import concatenate as join
 import awkward as ak
 from awkward import unflatten as build
+
+from dewloosh.math.arraysetops import unique2d
 
 
 class TopologyArray(ak.Array):

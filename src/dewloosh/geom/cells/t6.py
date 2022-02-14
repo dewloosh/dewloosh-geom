@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.utils import cell_coords_bulk
+from dewloosh.geom.utils import cells_coords
 from dewloosh.geom.polygon import QuadraticTriangle as Triangle
 from numba import njit, prange
 import numpy as np
@@ -58,8 +58,7 @@ def dshp_LST_bulk(pcoords: ndarray):
 
 
 @njit(nogil=True, parallel=True, fastmath=True, cache=__cache)
-def areas_T6(ecoords: np.ndarray, qpos: np.ndarray,
-             qweight: np.ndarray):
+def areas_T6(ecoords: np.ndarray, qpos: np.ndarray, qweight: np.ndarray):
     nE = len(ecoords)
     res = np.zeros(nE, dtype=ecoords.dtype)
     nP = len(qweight)
@@ -93,7 +92,7 @@ class T6(Triangle):
     def areas(self, *args, coords=None, topo=None, **kwargs):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
         topo = self.nodes.to_numpy() if topo is None else topo
-        ecoords = cell_coords_bulk(coords[:, :2], topo)
+        ecoords = cells_coords(coords[:, :2], topo)
         qpos, qweight = np.array([[1/6, 1/6], [2/3, 1/6], [1/6, 2/3]]), \
             np.array([1/6, 1/6, 1/6])
         return areas_T6(ecoords, qpos, qweight)

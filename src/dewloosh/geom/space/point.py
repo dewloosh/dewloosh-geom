@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+
 from dewloosh.math.linalg import Vector
-from dewloosh.geom.space import StandardFrame
+from .frame import CartesianFrame
 
 
 class Point(Vector):
     
-    _frame_cls_ = StandardFrame
+    _frame_cls_ = CartesianFrame
     
     def __init__(self, *args, frame=None, **kwargs):
         if frame is None:

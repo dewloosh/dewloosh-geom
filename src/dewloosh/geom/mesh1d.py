@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.space import frames_of_lines
-from dewloosh.geom.rgrid import rgridMT as grid
-from dewloosh.math.array import atleast3d
 import numpy as np
 from numpy import ndarray
 from numba import njit
-from dewloosh.math.array import repeat
+
+from dewloosh.math.array import atleast3d, repeat
+from .space import frames_of_lines
+from .rgrid import rgridMT as grid
+
+
 __cache = True
 
 

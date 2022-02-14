@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-from dewloosh.core.tools import issequence
-from dewloosh.math.array import i32array, minmax
-from dewloosh.math.linalg.vector import VectorBase, Vector
-from dewloosh.math.linalg.frame import ReferenceFrame as FrameLike
-from dewloosh.geom.space.frame import CartesianFrame
 from numba.core import types as nbtypes, cgutils
 from numba.extending import typeof_impl, models, \
     make_attribute_wrapper, register_model, box, \
@@ -15,6 +10,13 @@ from numpy import ndarray
 import numpy as np
 from numba import njit, prange
 from typing import Union
+
+from dewloosh.core.tools import issequence
+from dewloosh.math.array import i32array, minmax
+from dewloosh.math.linalg.vector import VectorBase, Vector
+from dewloosh.math.linalg.frame import ReferenceFrame as FrameLike
+from .frame import CartesianFrame
+
 __cache = True
 
 

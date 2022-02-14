@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom import PolyData
-from dewloosh.geom import H8
-from dewloosh.geom.rgrid import grid
-from dewloosh.geom.utils import detach_mesh_bulk
 import numpy as np
 from numpy import ndarray
+
+from .polydata import PolyData
+from .cells import H8
+from .rgrid import grid
+from .topo import detach_mesh_bulk
 
 
 def voxelize_cylinder(radius: ndarray, height: float, size: float):

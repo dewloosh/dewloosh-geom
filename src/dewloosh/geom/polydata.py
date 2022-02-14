@@ -1,25 +1,29 @@
 # -*- coding: utf-8 -*-
-from dewloosh.core import Library
-from dewloosh.math.linalg import Vector, VectorBase
-from dewloosh.math.linalg import ReferenceFrame as FrameLike
-from dewloosh.geom.space import CartesianFrame
-from dewloosh.geom.utils import cells_coords, cells_around,\
-    detach_mesh_bulk as detach_mesh, cell_center_bulk
-from dewloosh.geom.vtkutils import mesh_to_vtk
-from dewloosh.geom.polygon import Triangle
-from dewloosh.geom.Q4 import Q4 as Quadrilateral
-from dewloosh.geom.polyhedron import HexaHedron, Wedge, TriquadraticHexaHedron
-from dewloosh.geom.utils import index_of_closest_point, nodal_distribution_factors
-from dewloosh.geom.topo import regularize, nodal_adjacency, cells_at_nodes
-from dewloosh.geom.space import PointCloud
-from dewloosh.geom.topo.topologyarray import TopologyArray
-from dewloosh.math.array import atleast3d, repeat
 import awkward as ak
 from typing import Iterable
 from copy import copy
 from typing import Union
 from numpy import ndarray
 import numpy as np
+
+from dewloosh.core import Library
+from dewloosh.math.linalg import Vector, ReferenceFrame as FrameLike
+from dewloosh.math.linalg.vector import VectorBase
+from dewloosh.math.array import atleast3d, repeat
+
+from .space import CartesianFrame
+from .utils import cells_coords, cells_around, cell_center_bulk
+from .topo import detach_mesh_bulk as detach_mesh
+from .utils import k_nearest_neighbours as KNN
+from .vtkutils import mesh_to_vtk
+from .polygon import Triangle
+from .cells.q4 import Q4 as Quadrilateral
+from .polyhedron import HexaHedron, Wedge, TriquadraticHexaHedron
+from .utils import index_of_closest_point, nodal_distribution_factors
+from .topo import regularize, nodal_adjacency, cells_at_nodes
+from .space import PointCloud
+from .topo.topologyarray import TopologyArray
+
 try:
     import vtk
     __hasvtk__ = True
@@ -246,7 +250,7 @@ class PolyData(Library):
         _topo = self.topology() if _topo is None else _topo
         return cells_coords(self.root().coords(), _topo)
 
-    def center(self, target: FrameLike = None):
+    def center(self, target: FrameLike=None):
         if self.is_root():
             return self.points().center(target)         
         else:
@@ -255,7 +259,7 @@ class PolyData(Library):
             pc = root.points()[inds]
             return pc.center(target)
         
-    def centers(self, *args, target: FrameLike = None, **kwargs):
+    def centers(self, *args, target: FrameLike=None, **kwargs):
         if self.is_root():
             coords = self.points().show(target)         
         else:
@@ -270,6 +274,18 @@ class PolyData(Library):
         pc.centralize(target)
         self.pointdata['x'] = pc.show(self.frame) 
         return self
+    
+    def k_nearest_cell_neighbours(self, k, *args, knn_options=None, **kwargs):
+        """
+        Returns the k closest neighbours of the cells of the mesh, based
+        on the centers of each cell.
+        
+        The argument `knn_options` is passed to the KNN search algorithm,
+        the rest to the `centers` function of the mesh.
+        """
+        c = self.centers(*args, **kwargs)
+        knn_options = {} if knn_options is None else knn_options
+        return KNN(c, c, k=k, **knn_options)
 
     def areas(self, *args, **kwargs):
         coords = self.root().coords()
@@ -287,7 +303,6 @@ class PolyData(Library):
         vmap = map(lambda b: b.celldata.volumes(coords=coords), blocks)
         return np.concatenate(list(vmap))
 
-    @property 
     def volume(self, *args, **kwargs):
         return np.sum(self.volumes(*args, **kwargs))
 

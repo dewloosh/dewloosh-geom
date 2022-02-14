@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from dewloosh.math.linalg.frame import ReferenceFrame
-from dewloosh.math.linalg.vector import Vector
 from typing import Union
 from numpy import ndarray
 from copy import deepcopy as dcopy
+
+from dewloosh.math.linalg.frame import ReferenceFrame
+from dewloosh.math.linalg.vector import Vector
 
 
 __all__ = ['CartesianFrame']

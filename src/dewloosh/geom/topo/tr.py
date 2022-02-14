@@ -1,33 +1,36 @@
 # -*- coding: utf-8 -*-
 # !TODO  handle decimation in all transformations, template : T6_to_T3
-# !TODO  correct all transformations, template : Q4_to_T3
 import numpy as np
 from numba import njit, prange
-from dewloosh.geom.tri.triutils import edges_tri
-from dewloosh.geom.utils import cell_coords_bulk
-from dewloosh.geom.topo.topodata import edges_Q4, edges_H8, faces_H8
-from dewloosh.geom.topo import unique_topo_data
 from typing import Union, Sequence
 from collections import Iterable
 from numpy import ndarray
 from concurrent.futures import ThreadPoolExecutor
+
+from ..tri.triutils import edges_tri
+from ..utils import cells_coords
+from .topodata import edges_Q4, edges_H8, faces_H8
+from .topo import unique_topo_data
+
 __cache = True
 
 
 __all__ = [
+    'transform_topo',
     'T3_to_T6', 'T6_to_T3',
     'Q4_to_Q8',
     'Q4_to_Q9', 'Q9_to_Q4',
     'Q9_to_T6',
     'Q4_to_T3',
-    'H8_to_H27'
+    'H8_to_H27',
+    'H8_to_TET4'
 ]
 
 
 DataLike = Union[ndarray, Sequence[ndarray]]
 
 
-def transform_topo(topo: ndarray, path: ndarray, data: ndarray=None,
+def transform_topo(topo: ndarray, path: ndarray, data: ndarray = None,
                    *args, MT=True, max_workers=4, **kwargs):
     nD = len(path.shape)
     if nD == 1:
@@ -85,24 +88,14 @@ def repeat_cell_nodal_data(edata: ndarray, path: ndarray):
     return res
 
 
-def T3_to_T6(coords: ndarray, topo: ndarray):
-    nP = len(coords)
-    edges, edgeIDs = unique_topo_data(edges_tri(topo))
-    new_coords = np.mean(coords[edges], axis=1)
-    new_topo = edgeIDs + nP
-    topo = np.hstack((topo, new_topo))
-    coords = np.vstack((coords, new_coords))
-    return coords, topo
-
-
 def T6_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,
-             *args, path: ndarray=None, decimate=True, **kwargs):
+             *args, path: ndarray = None, decimate=True, **kwargs):
     if isinstance(path, ndarray):
         assert path.shape[1] == 3
     else:
         if path is None:
             if decimate:
-                path = np.array([[0, 3, 5], [3, 1, 4], 
+                path = np.array([[0, 3, 5], [3, 1, 4],
                                  [5, 4, 2], [5, 3, 4]], dtype=topo.dtype)
             else:
                 path = np.array([[0, 1, 2]], dtype=topo.dtype)
@@ -110,67 +103,6 @@ def T6_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,
         return coords, + transform_topo(topo, path, *args, **kwargs)
     else:
         return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
-
-"""
-def T6_to_T3(coords: ndarray, topo: ndarray, *args,
-             path: ndarray=None, edata=None, decimate=True,
-             return_inverse=False, **kwargs):
-    if edata is not None:
-        assert isinstance(edata, ndarray), \
-            "If 'edata' is provided, it must be a numpy array!"
-    if decimate:
-        if path is None:
-            path = np.array([[0, 3, 5], [3, 1, 4], [5, 4, 2], [5, 3, 4]],
-                            dtype=topo.dtype)
-        if edata is not None:
-            data_T3 = np.repeat(edata, 4, axis=0)
-            return T6_to_T3_h(coords, topo, path) + (data_T3,)
-        else:
-            return T6_to_T3_h(coords, topo, path)
-    else:
-        if edata is not None:
-            return detach_mesh(coords, topo[:, [0, 1, 2]]) + (edata,)
-        else:
-            return detach_mesh(coords, topo[:, [0, 1, 2]])
-
-
-@njit(nogil=True, parallel=True, cache=__cache)
-def T6_to_T3_h(coords: ndarray, topo: ndarray, path: ndarray):
-    nE = len(topo)
-    topoT3 = np.zeros((4 * nE, 3), dtype=topo.dtype)
-    for iE in prange(nE):
-        n = iE * 4
-        for j in prange(4):
-            for k in prange(3):
-                topoT3[n + j, k] = topo[iE, path[j, k]]
-    return coords, topoT3
-"""
-
-def Q4_to_Q8(coords: ndarray, topo: ndarray):
-    nP = len(coords)
-    edges, edgeIDs = unique_topo_data(edges_Q4(topo))
-    new_coords = np.mean(coords[edges], axis=1)
-    new_topo = edgeIDs + nP
-    topo = np.hstack((topo, new_topo))
-    coords = np.vstack((coords, new_coords))
-    return coords, topo
-
-
-def Q4_to_Q9(coords: ndarray, topo: ndarray):
-    nP, nE = len(coords), len(topo)
-    # new nodes on the edges
-    edges, edgeIDs = unique_topo_data(edges_Q4(topo))
-    coords_e = np.mean(coords[edges], axis=1)
-    topo_e = edgeIDs + nP
-    nP += len(coords_e)
-    # new coords at element centers
-    ecoords = cell_coords_bulk(coords, topo)
-    coords_c = np.mean(ecoords, axis=1)
-    topo_c = np.arange(nE) + nP
-    # assemble
-    topo_res = np.hstack((topo, topo_e, topo_c))
-    coords_res = np.vstack((coords, coords_e, coords_c))
-    return coords_res, topo_res
 
 
 def Q9_to_Q4(coords: ndarray, topo: ndarray, data: DataLike = None,
@@ -212,6 +144,22 @@ def _Q9_to_T6(coords: ndarray, topo: ndarray, path: ndarray):
     return coords, topoT6
 
 
+def H8_to_TET4(coords: ndarray, topo: ndarray, data: DataLike = None,
+               *args, path: ndarray = None, **kwargs):
+    if isinstance(path, ndarray):
+        assert path.shape[1] == 4
+    else:
+        if path is None:
+            path = np.array([[0, 1, 2, 5], [0, 2, 3, 7], [4, 5, 7, 0],
+                             [5, 6, 7, 2], [0, 2, 7, 5]], dtype=topo.dtype)
+        elif isinstance(path, str):
+            raise NotImplementedError
+    if data is None:
+        return coords, + transform_topo(topo, path, *args, **kwargs)
+    else:
+        return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
+
+
 def Q4_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,
              *args, path: ndarray = None, **kwargs):
     if isinstance(path, ndarray):
@@ -228,9 +176,46 @@ def Q4_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,
         return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
 
 
+def T3_to_T6(coords: ndarray, topo: ndarray):
+    nP = len(coords)
+    edges, edgeIDs = unique_topo_data(edges_tri(topo))
+    new_coords = np.mean(coords[edges], axis=1)
+    new_topo = edgeIDs + nP
+    topo = np.hstack((topo, new_topo))
+    coords = np.vstack((coords, new_coords))
+    return coords, topo
+
+
+def Q4_to_Q8(coords: ndarray, topo: ndarray):
+    nP = len(coords)
+    edges, edgeIDs = unique_topo_data(edges_Q4(topo))
+    new_coords = np.mean(coords[edges], axis=1)
+    new_topo = edgeIDs + nP
+    topo_res = np.hstack((topo, new_topo))
+    coords_res= np.vstack((coords, new_coords))
+    return coords_res, topo_res
+
+
+def Q4_to_Q9(coords: ndarray, topo: ndarray):
+    nP, nE = len(coords), len(topo)
+    # new nodes on the edges
+    edges, edgeIDs = unique_topo_data(edges_Q4(topo))
+    coords_e = np.mean(coords[edges], axis=1)
+    topo_e = edgeIDs + nP
+    nP += len(coords_e)
+    # new coords at element centers
+    ecoords = cells_coords(coords, topo)
+    coords_c = np.mean(ecoords, axis=1)
+    topo_c = np.reshape(np.arange(nE) + nP, (nE, 1))
+    # assemble
+    topo_res = np.hstack((topo, topo_e, topo_c))
+    coords_res = np.vstack((coords, coords_e, coords_c))
+    return coords_res, topo_res
+
+
 def H8_to_H27(coords: ndarray, topo: ndarray):
     nP, nE = len(coords), len(topo)
-    ecoords = cell_coords_bulk(coords, topo)
+    ecoords = cells_coords(coords, topo)
     # new nodes on the edges
     edges, edgeIDs = unique_topo_data(edges_H8(topo))
     coords_e = np.mean(coords[edges], axis=1)

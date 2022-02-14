@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.space import PointCloud
-from dewloosh.geom.tri import triangulate
 import numpy as np
 from hypothesis import given, strategies as st
 import unittest
+
+from dewloosh.geom import PointCloud, triangulate
 
 
 def test_pointcloud_basic():

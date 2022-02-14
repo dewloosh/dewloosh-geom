@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from numba import njit, prange
-from dewloosh.geom.topo.tr import transform_topo
-from dewloosh.geom.utils import center_of_points
-from dewloosh.geom.polydata import PolyData
+
+from .topo.tr import transform_topo
+from .utils import center_of_points
+from .polydata import PolyData
 __cache = True
 
 
-__all__ = ['grid', 'gridQ4', 'gridQ9', 'gridH8', 'gridH27']
+__all__ = ['grid', 'Grid']
 
 
 def grid(*args, size=None, shape=None, eshape=None, shift=None, start=0,

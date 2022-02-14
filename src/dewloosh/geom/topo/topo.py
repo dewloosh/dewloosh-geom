@@ -1,22 +1,28 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+from numpy import ndarray
+from numba import njit, prange
+from typing import Union, Dict, List, Tuple
+from awkward import Array as akarray
+from scipy.sparse import csr_matrix as csr_scipy
+
 from dewloosh.math.linalg.sparse.csr import csr_matrix
 from dewloosh.math.linalg.sparse.jaggedarray import JaggedArray
 from dewloosh.math.arraysetops import unique2d
 from dewloosh.math.array import count_cols
-import numpy as np
-from numpy import ndarray
-from numba import njit, prange
-import networkx as nx
-from typing import Union, Dict, List, Tuple
-from awkward import Array as akarray
-from scipy.sparse import csr_matrix as csr_scipy
-__cache = True
+
+try:
+    import networkx as nx
+    __hasnx__ = True
+except Exception:
+    __hasnx__ = False
 
 
 __all__ = ['is_regular', 'regularize', 'count_cells_at_nodes', 'cells_at_nodes',
-           'nodal_adjacency', 'unique_topo_data', 'remap_topo']
+           'nodal_adjacency', 'unique_topo_data', 'remap_topo', 'detach_mesh_bulk']
 
 
+__cache = True
 TopoLike = Union[ndarray, JaggedArray]
 DoL = Dict[int, List[int]]
 
@@ -168,7 +174,8 @@ def count_cells_at_nodes(topo: TopoLike, regular=False):
 
 def cells_at_nodes(topo: TopoLike, *args, frmt=None, assume_regular=False,
                    cellIDs=None, return_counts=False, **kwargs):
-    """ Returns data about element connectivity at the nodes of a mesh.
+    """ 
+    Returns data about element connectivity at the nodes of a mesh.
 
     Parameters
     ----------
@@ -416,6 +423,61 @@ def dol_to_jagged_data(dol: DoL) -> Tuple[ndarray, ndarray]:
     return widths, data1d
 
 
+@njit(nogil=True, cache=__cache)
+def detach_mesh_bulk(coords: ndarray, topo: ndarray):
+    """
+    Given a topology array and the coordinate array it refers to, 
+    the function returns the coordinate array of the points involved 
+    in the topology, and a new topology array, with indices referencing 
+    the new coordinate array. 
+    """
+    inds = np.unique(topo)
+    return coords[inds], remap_topo(topo, inds_to_invmap_as_dict(inds))
+
+
+@njit(nogil=True, cache=__cache)
+def inds_to_invmap_as_dict(inds: np.ndarray):
+    """
+    Returns a mapping that maps global indices to local ones.
+
+    Parameters
+    ----------
+    inds : numpy.ndarray
+        An array of global indices.
+
+    Returns
+    -------
+    dict
+        Mapping from global to local.
+    """
+    res = dict()
+    for i in range(len(inds)):
+        res[inds[i]] = i
+    return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def inds_to_invmap_as_array(inds: np.ndarray):
+    """
+    Returns a mapping that maps global indices to local ones
+    as an array.
+
+    Parameters
+    ----------
+    inds : numpy.ndarray
+        An array of global indices.
+
+    Returns
+    -------
+    numpy.ndarray
+        Mapping from global to local.
+    """
+    res = np.zeros(inds.max() + 1, dtype=inds.dtype)
+    for i in prange(len(inds)):
+        res[inds[i]] = i
+    return res
+
+
 def nodal_adjacency(topo: TopoLike, *args, frmt=None, 
                     assume_regular=False, **kwargs):
     """Returns nodal adjacency information of a mesh.
@@ -459,6 +521,9 @@ def nodal_adjacency(topo: TopoLike, *args, frmt=None,
     elif isinstance(topo, akarray):
         cuts, topo1d = JaggedArray(topo).flatten(return_cuts=True)
         dol = _nodal_adjacency_as_dol_ak_(topo1d.to_numpy(), cuts, ereg)
+    if not __hasnx__ and frmt != 'jagged':
+        errorstr = "`networkx` must be installed for format '{}'."
+        raise ImportError(errorstr.format(frmt))
     if frmt == 'nx':
         return nx.from_dict_of_lists(dol)
     elif frmt == 'scipy-csr':
@@ -493,6 +558,16 @@ def unique_topo_data(topo3d: TopoLike):
     numpy.ndarray
         Indices of the unique array, that can be used to 
         reconstruct `topo`.
+        
+    Examples
+    --------
+    Find unique edges of a mesh of Q4 quadrilaterals
+        
+    >>> from dewloosh.geom.rgrid import grid
+    >>> from dewloosh.geom.topo.topodata import edges_Q4
+    >>> coords, topo = grid(size=(1, 1), shape=(10, 10), eshape='Q4')
+    >>> edges, edgeIDs = unique_topo_data(edges_Q4(topo))
+        
     """
     if isinstance(topo3d, ndarray):
         nE, nD, nN = topo3d.shape

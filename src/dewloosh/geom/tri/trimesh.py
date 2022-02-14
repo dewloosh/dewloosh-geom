@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.polydata import PolyData
-from dewloosh.geom.polyhedron import TetraHedron as Tetra
-from dewloosh.geom.polygon import Triangle, QuadraticTriangle
-from dewloosh.geom.space.utils import frames_of_surfaces, \
-    is_planar_surface as is_planar
-from dewloosh.geom.extrude import extrude_T3_TET4
-from dewloosh.geom.tri.triang import triangulate
-from dewloosh.math.array import ascont
-from dewloosh.geom.tri.triutils import edges_tri
-from dewloosh.geom.topo import unique_topo_data
 import numpy as np
+
+from dewloosh.math.array import ascont
+
+from ..polydata import PolyData
+from ..cells import T3, T6, TET4
+from ..space.utils import frames_of_surfaces, is_planar_surface as is_planar
+from ..extrude import extrude_T3_TET4
+from ..tri.triang import triangulate
+from ..tri.triutils import edges_tri
+from ..topo import unique_topo_data
+from ..topo.tr import T3_to_T6
 
 
 class TriMesh(PolyData):
@@ -57,11 +58,14 @@ class TriMesh(PolyData):
             if isinstance(triangles, np.ndarray):
                 nNode = triangles.shape[1]
                 if nNode == 3:
-                    celltype = Triangle
+                    celltype = T3
                 elif nNode == 6:
-                    celltype = QuadraticTriangle
+                    celltype = T6
             else:
                 raise NotImplementedError
+        if triangles.shape[1] == 3 and celltype.NNODE == 6:
+            points, triangles = T3_to_T6(points, triangles)
+        assert triangles.shape[1] == celltype.NNODE
         super().__init__(*args, coords=points, topo=triangles, celltype=celltype,
                          frame=frame, newaxis=newaxis, **kwargs)
         self._newaxis = newaxis
@@ -103,11 +107,12 @@ class TriMesh(PolyData):
             A tetrahedral mesh.
 
         """
-        from dewloosh.geom import TetMesh
+        from dewloosh.geom.tet.tetmesh import TetMesh
         if not self.is_planar():
             raise RuntimeError("Only planar surfaces can be extruded!")
         assert celltype is None, "Currently only TET4 element is supported!"
-        celltype = Tetra if celltype == None else celltype
+        celltype = TET4 if celltype == None else celltype
+        assert self.celltype.NNODE == 3, "Only T3 elements are supported at the moment."
         coords, topo = extrude_T3_TET4(self.coords(), self.topology(), h, N)
         return TetMesh(coords=coords, topo=topo, celltype=celltype)
 

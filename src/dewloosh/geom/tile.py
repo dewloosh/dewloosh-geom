@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-from dewloosh.math.array import minmax
-from dewloosh.geom.utils import detach_mesh_bulk as detach_mesh, remap_topo
 import numpy as np
 from numpy import ndarray as array
 from numba import njit, prange
+
+from dewloosh.math.array import minmax
+
+from .topo import detach_mesh_bulk as detach_mesh, remap_topo
+
 __cache = True
 
 
