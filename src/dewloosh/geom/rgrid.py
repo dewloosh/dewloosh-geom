@@ -5,6 +5,7 @@ from numba import njit, prange
 from .topo.tr import transform_topo
 from .utils import center_of_points
 from .polydata import PolyData
+
 __cache = True
 
 
@@ -34,7 +35,7 @@ def grid(*args, size=None, shape=None, eshape=None, shift=None, start=0,
         Startin value for node numbering. Default is 0.
         
     bins : numpy.ndarray, Optional
-        Numpy array specifying bins.
+        Numpy array or an iterable of numy arrays.
         
     centralize : bool, Optional
         If True, the returned coordinates are centralized.
@@ -47,7 +48,6 @@ def grid(*args, size=None, shape=None, eshape=None, shift=None, start=0,
     numpy.ndarray
         Topology array.
     
-    
     Examples
     --------
     Create a simple hexagonal mesh
@@ -57,33 +57,40 @@ def grid(*args, size=None, shape=None, eshape=None, shift=None, start=0,
     >>> mesh = (coords, topo) = grid(size=size, shape=shape, eshape='H8')
     
     """
-    nDime = len(size)
+    if size is not None:
+        nDime = len(size)
+    elif bins is not None:
+        nDime = len(bins)
+    elif shape is not None:
+        nDime = len(shape)
+
+    if shift is None:
+        shift = np.zeros(nDime)
+
     if eshape is None:
         eshape = np.full(nDime, 2, dtype=int)
     elif isinstance(eshape, str):
         if eshape == 'Q4':
             return gridQ4(*args, size=size, shape=shape, shift=shift,
-                           start=start, centralize=centralize, **kwargs)
+                           start=start, centralize=centralize, bins=bins, **kwargs)
         elif eshape == 'Q9':
             return gridQ9(*args, size=size, shape=shape, shift=shift,
-                           start=start, centralize=centralize, **kwargs)
+                           start=start, centralize=centralize, bins=bins, **kwargs)
         elif eshape == 'H8':
             return gridH8(*args, size=size, shape=shape, shift=shift,
-                           start=start, centralize=centralize, **kwargs)
+                           start=start, centralize=centralize, bins=bins, **kwargs)
         elif eshape == 'H27':
             return gridH27(*args, size=size, shape=shape, shift=shift,
-                            start=start, centralize=centralize, **kwargs)
+                            start=start, centralize=centralize, bins=bins, **kwargs)
         else:
             raise NotImplementedError
-    if shift is None:
-        shift = np.zeros(nDime)
-
-    if isinstance(bins, np.ndarray):
-        if bins.shape[0] == 3:
-            coords, topo = grid_3d_bins(bins[0], bins[1], bins[2],
-                                        eshape, shift, start)
+    
+    if bins is not None:
+        if len(bins) == 2:
+            coords, topo = grid_2d_bins(bins[0], bins[1], eshape, shift, start)
+        elif len(bins) == 3:
+            coords, topo = grid_3d_bins(bins[0], bins[1], bins[2], eshape, shift, start)
         else:
-            # !TODO : fix rgrid_2d_bins
             raise NotImplementedError
     else:
         assert isinstance(eshape, tuple)
@@ -127,9 +134,10 @@ def gridH27(*args, **kwargs):
 
 
 @njit(nogil=True, cache=__cache)
-def rgridST(size, shape, eshape, shift, start=0):
+def _rgridST(size, shape, eshape, shift, start=0):
     """
-    Legacy code for single-thread implamantation. Use rgridMT.
+    Legacy code for single-thread implementation, for educational purpose only. 
+    Use rgridMT.
     """
     nDime = len(size)
 
@@ -320,9 +328,8 @@ def rgridMT(size, shape, eshape, shift, start=0):
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
-def rgrid_2d_bins(xbins, ybins, eshape, shift, start=0):
-    # !FIXME
-    raise RuntimeError
+def grid_2d_bins(xbins, ybins, eshape, shift, start=0):
+       
     # size
     lX = xbins.max() - xbins.min()
     lY = ybins.max() - ybins.min()
@@ -346,27 +353,23 @@ def rgrid_2d_bins(xbins, ybins, eshape, shift, start=0):
     ddY = dY / (nNEY - 1)
 
     # create grid
-    coords = np.zeros((nN, 3))
+    coords = np.zeros((nN, 2))
     topo = np.zeros((nC, nNE), dtype=np.int64)
     for i in prange(nEX):
         for j in prange(nEY):
             iE = i * nEY + j
             for p in prange(nNEX):
                 for q in prange(nNEY):
-                    n = (((nNEX - 1) * i + p) * nNY +
-                         (nNEY - 1) * j + q) * nNZ + \
-                        (nNEZ - 1) * k + r
+                    n = ((nNEX - 1) * i + p) * nNY + (nNEY - 1) * j + q
                     coords[n, 0] = shift[0] + xbins[i] + ddX * p
                     coords[n, 1] = shift[1] + ybins[j] + ddY * q
-                    coords[n, 2] = shift[2] + zbins[k] + ddZ * r
-                    iNE = p * nNEZ * nNEY + q * nNEZ + r
+                    iNE = p * nNEY + q
                     topo[iE, iNE] = n
     return coords, topo + start
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
 def grid_3d_bins(xbins, ybins, zbins, eshape, shift, start=0):
-
     # size
     lX = xbins.max() - xbins.min()
     lY = ybins.max() - ybins.min()
@@ -417,7 +420,7 @@ def grid_3d_bins(xbins, ybins, zbins, eshape, shift, start=0):
 
 class Grid(PolyData):
     """
-    A class to handle quadrilateral meshes.
+    A class to handle quadrilateral or hexagonal meshes.
     
     Examples
     --------
@@ -433,28 +436,3 @@ class Grid(PolyData):
         coords, topo = grid(*args, eshape=eshape, **kwargs)
         super().__init__(*args, coords=coords, topo=topo, 
                          celltype=celltype, frame=frame, **kwargs)
-
-
-
-if __name__ == '__main__':
-
-    size = Lx, Ly, Lz = 800, 600, 20
-    shape = nx, ny, nz = 8, 6, 2
-    eshape = 3, 3, 3
-    shift = 0, 0, 0
-    start = 0
-
-    coordsQ9, topoQ9 = grid(size=size, shape=shape, eshape=eshape)
-    coordsQ9_ST, topoQ9_ST = rgridST(size=size, shape=shape, eshape=eshape,
-                                     shift=shift, start=start)
-    coordsQ9_MT, topoQ9_MT = rgridMT(size=size, shape=shape, eshape=eshape,
-                                     shift=shift, start=start)
-
-    xbins = np.linspace(0, Lx, nx+1)
-    ybins = np.linspace(0, Ly, ny+1)
-    zbins = np.linspace(0, Lz, nz+1)
-    coords, topo = grid_3d_bins(xbins, ybins, zbins, eshape, shift)
-
-    print(len(xbins))
-
-    pass
