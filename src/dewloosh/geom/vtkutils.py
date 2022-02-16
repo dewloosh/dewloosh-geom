@@ -9,8 +9,7 @@ except Exception:
     __hasvtk__ = False
 
 
-
-def mesh_to_vtk(coords, topo, vtkCellType, deepcopy=True):
+def mesh_to_vtkdata(coords, topo, deepcopy=True):
     if not __hasvtk__:
         raise ImportError
     # points
@@ -20,12 +19,25 @@ def mesh_to_vtk(coords, topo, vtkCellType, deepcopy=True):
     # cells
     topo_vtk = np.concatenate((np.ones((topo.shape[0], 1), dtype=topo.dtype) *
                                topo.shape[1], topo), axis=1).ravel()
-    cells_vtk = vtk.vtkCellArray()
-    cells_vtk.SetNumberOfCells(topo.shape[0])
-    cells_vtk.SetCells(topo.shape[0], np2vtkId(topo_vtk, deep=deepcopy))
+    vtkcells = vtk.vtkCellArray()
+    vtkcells.SetNumberOfCells(topo.shape[0])
+    vtkcells.SetCells(topo.shape[0], np2vtkId(topo_vtk, deep=deepcopy))
+    
+    return vtkpoints, vtkcells
 
-    # grid
+
+def mesh_to_UnstructuredGrid(coords, topo, vtkCellType, deepcopy=True):
+    vtkpoints, vtkcells = mesh_to_vtkdata(coords, topo, deepcopy)
     ugrid = vtk.vtkUnstructuredGrid()
     ugrid.SetPoints(vtkpoints)
-    ugrid.SetCells(vtkCellType, cells_vtk)
+    ugrid.SetCells(vtkCellType, vtkcells)
     return ugrid
+
+
+def mesh_to_PolyData(coords, topo, deepcopy=True):
+    vtkpoints, vtkcells = mesh_to_vtkdata(coords, topo, deepcopy)
+    vtkPolyData = vtk.vtkPolyData()
+    vtkPolyData.SetPoints(vtkpoints)
+    vtkPolyData.SetPolys(vtkcells)
+    vtkPolyData.Modified()
+    return vtkPolyData

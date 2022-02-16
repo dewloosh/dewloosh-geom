@@ -15,7 +15,7 @@ from .space import CartesianFrame
 from .utils import cells_coords, cells_around, cell_center_bulk
 from .topo import detach_mesh_bulk as detach_mesh
 from .utils import k_nearest_neighbours as KNN
-from .vtkutils import mesh_to_vtk
+from .vtkutils import mesh_to_UnstructuredGrid as mesh_to_vtk
 from .polygon import Triangle
 from .cells.q4 import Q4 as Quadrilateral
 from .polyhedron import HexaHedron, Wedge, TriquadraticHexaHedron
