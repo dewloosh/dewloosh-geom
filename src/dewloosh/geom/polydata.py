@@ -24,16 +24,11 @@ from .topo import regularize, nodal_adjacency, cells_at_nodes
 from .space import PointCloud
 from .topo.topologyarray import TopologyArray
 
-try:
+from .config import __hasvtk__, __haspyvista__
+if __hasvtk__:
     import vtk
-    __hasvtk__ = True
-except Exception:
-    __hasvtk__ = False
-try:
+if __haspyvista__:
     import pyvista as pv
-    __haspyvista__ = True
-except Exception:
-    __haspyvista__ = False
 
 
 def gen_frame(coords): return CartesianFrame(dim=coords.shape[1])
@@ -43,13 +38,13 @@ VectorLike = Union[Vector, ndarray]
 
 
 class PolyData(Library):
-    
+
     """
     A class to handle complex polygonal data.
     """
 
     def __init__(self, *args, coords=None, topo=None, celltype=None,
-                 frame: FrameLike=None, newaxis: int=2, **kwargs):
+                 frame: FrameLike = None, newaxis: int = 2, **kwargs):
         super().__init__(*args, **kwargs)
         self.pointdata = None
         self.celldata = None
@@ -137,13 +132,13 @@ class PolyData(Library):
         else:
             f = self._frame
             return f if f is not None else self.parent.frame
-    
+
     @property
     def frames(self):
         if self.celldata is not None and 'frames' in self.celldata.fields:
             return self.celldata.frames.to_numpy()
-    
-    @frames.setter        
+
+    @frames.setter
     def frames(self, value):
         assert self.celldata is not None
         if isinstance(value, ndarray):
@@ -151,12 +146,12 @@ class PolyData(Library):
             if len(value) == 1:
                 value = repeat(value[0], len(self.celldata._wrapped))
             else:
-                assert len(value) == len(self.celldata._wrapped)                
+                assert len(value) == len(self.celldata._wrapped)
             self.celldata._wrapped['frames'] = value
         else:
-            raise TypeError(('Type {} is not a supported' + \
-                ' type to specify frames.').format(type(value)))
-        
+            raise TypeError(('Type {} is not a supported' +
+                             ' type to specify frames.').format(type(value)))
+
     def points(self, *args, return_inds=False, **kwargs) -> PointCloud:
         if self.is_root():
             coords = self.pointdata.x.to_numpy()
@@ -181,12 +176,12 @@ class PolyData(Library):
                 return self.root().coords()[inds, :], inds
             else:
                 return self.root().coords()[inds, :]
-            
-    def move(self, v : VectorLike, frame: FrameLike = None):
+
+    def move(self, v: VectorLike, frame: FrameLike = None):
         if self.is_root():
             pc = self.points()
             pc.move(v, frame)
-            self.pointdata['x'] = pc.array           
+            self.pointdata['x'] = pc.array
         else:
             root = self.root()
             inds = np.unique(self.topology())
@@ -194,12 +189,12 @@ class PolyData(Library):
             pc.move(v, frame)
             root.pointdata['x'] = pc.array
         return self
-    
+
     def rotate(self, *args, **kwargs):
         if self.is_root():
             pc = self.points()
             pc.rotate(*args, **kwargs)
-            self.pointdata['x'] = pc.show(self.frame)           
+            self.pointdata['x'] = pc.show(self.frame)
         else:
             root = self.root()
             inds = np.unique(self.topology())
@@ -223,11 +218,11 @@ class PolyData(Library):
                 return topo, np.concatenate(inds)
             else:
                 return topo
-            
+
     def cells_at_nodes(self, *args, **kwargs):
         topo = self.topology()
         return cells_at_nodes(topo, *args, **kwargs)
-    
+
     def cells_around_cells(self, radius=None, frmt='dict'):
         if radius is None:
             # topology based
@@ -246,22 +241,22 @@ class PolyData(Library):
     def number_of_points(self):
         return len(self.root().pointdata)
 
-    def cellcoords(self, *args, _topo=None, **kwargs):
+    def cells_coords(self, *args, _topo=None, **kwargs):
         _topo = self.topology() if _topo is None else _topo
         return cells_coords(self.root().coords(), _topo)
 
-    def center(self, target: FrameLike=None):
+    def center(self, target: FrameLike = None):
         if self.is_root():
-            return self.points().center(target)         
+            return self.points().center(target)
         else:
             root = self.root()
             inds = np.unique(self.topology())
             pc = root.points()[inds]
             return pc.center(target)
-        
-    def centers(self, *args, target: FrameLike=None, **kwargs):
+
+    def centers(self, *args, target: FrameLike = None, **kwargs):
         if self.is_root():
-            coords = self.points().show(target)         
+            coords = self.points().show(target)
         else:
             root = self.root()
             inds = np.unique(self.topology())
@@ -272,14 +267,14 @@ class PolyData(Library):
     def centralize(self, target: FrameLike = None):
         pc = self.root().points()
         pc.centralize(target)
-        self.pointdata['x'] = pc.show(self.frame) 
+        self.pointdata['x'] = pc.show(self.frame)
         return self
-    
+
     def k_nearest_cell_neighbours(self, k, *args, knn_options=None, **kwargs):
         """
         Returns the k closest neighbours of the cells of the mesh, based
         on the centers of each cell.
-        
+
         The argument `knn_options` is passed to the KNN search algorithm,
         the rest to the `centers` function of the mesh.
         """
@@ -308,7 +303,7 @@ class PolyData(Library):
 
     def index_of_closest_point(self, target, *args, **kwargs):
         return index_of_closest_point(self.coords(), target)
-    
+
     def index_of_closest_cell(self, target, *args, **kwargs):
         return index_of_closest_point(self.centers(), target)
 
@@ -375,7 +370,7 @@ class PolyData(Library):
             pv.set_plot_theme(theme)
         poly = self.to_pv(deepcopy=deepcopy)
         if notebook:
-            poly.plot(*args, jupyter_backend=jupyter_backend, 
+            poly.plot(*args, jupyter_backend=jupyter_backend,
                       show_edges=show_edges, notebook=notebook, **kwargs)
         else:
             poly.plot(*args, show_edges=show_edges, notebook=notebook,
@@ -452,7 +447,7 @@ if __name__ == '__main__':
                                      vtkCellType=vtkCellType)
 
     pd.plot()
-    
+
     print('center : {}'.format(pd.center()))
     print(pd.points().x().min())
     print(pd.points().x().max())

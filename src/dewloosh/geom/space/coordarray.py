@@ -12,7 +12,7 @@ from numba import njit, prange
 from typing import Union
 
 from dewloosh.core.tools import issequence
-from dewloosh.math.array import i32array, minmax
+from dewloosh.math.array import minmax
 from dewloosh.math.linalg.vector import VectorBase, Vector
 from dewloosh.math.linalg.frame import ReferenceFrame as FrameLike
 from .frame import CartesianFrame
@@ -111,7 +111,7 @@ class PointCloud(Vector):
             if len(args) > 0 and isinstance(args[0], np.ndarray):
                 frame = self._frame_cls_(dim=args[0].shape[1])
         super().__init__(*args, frame=frame, **kwargs)
-        self.inds = inds if inds is None else i32array(inds)
+        self.inds = inds if inds is None else np.array(inds, dtype=int)
                 
     def __getitem__(self, key):
         inds = None

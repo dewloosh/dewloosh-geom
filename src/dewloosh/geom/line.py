@@ -14,7 +14,7 @@ class Line(PolyCell1d):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-                
+                        
     def lengths(self, *args, coords=None, topo=None, **kwargs):
         coords = self.pointdata.x.to_numpy() if coords is None else coords
         topo = self.nodes.to_numpy() if topo is None else topo
