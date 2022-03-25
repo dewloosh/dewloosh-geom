@@ -11,6 +11,8 @@ from dewloosh.math.linalg.sparse.jaggedarray import JaggedArray
 from dewloosh.math.arraysetops import unique2d
 from dewloosh.math.array import count_cols
 
+from ..utils import explode_mesh_bulk
+
 try:
     import networkx as nx
     __hasnx__ = True
@@ -25,6 +27,25 @@ __all__ = ['is_regular', 'regularize', 'count_cells_at_nodes', 'cells_at_nodes',
 __cache = True
 TopoLike = Union[ndarray, JaggedArray]
 DoL = Dict[int, List[int]]
+
+
+def flatten_line_mesh(coords: ndarray, topo: ndarray):
+    raise NotImplementedError
+    count = count_cells_at_nodes(topo)
+    mess = np.where(count<1)[0]
+    leafs = np.where(count==1)[0]
+    forks = np.where(count>2)[0]
+    inters = np.where(count==2)[0]
+    nP, _ = coords.shape
+    nE, nNE = topo.shape
+    if nP == nE * nNE:
+        _, t = coords, topo
+    else:
+        _, t = explode_mesh_bulk(coords, topo)
+    t_ = np.sort(t, axis=1)[:, 0]
+    order = np.argsort(t[:, 0])
+    t_ = t_[order]
+    return coords, order
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
@@ -572,7 +593,7 @@ def unique_topo_data(topo3d: TopoLike):
     if isinstance(topo3d, ndarray):
         nE, nD, nN = topo3d.shape
         topo3d = topo3d.reshape((nE * nD, nN))
-        topo3d = np.sort(topo3d, axis=1)
+        topo3d = np.sort(topo3d, axis=1)  
         topo3d, topoIDs = np.unique(topo3d, axis=0, return_inverse=True)
         topoIDs = topoIDs.reshape((nE, nD))
         return topo3d, topoIDs

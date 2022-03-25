@@ -85,11 +85,18 @@ def dshp_Q9(pcoord: np.ndarray):
 
 @njit(nogil=True, parallel=True, cache=__cache)
 def dshp_Q9_bulk(pcoords: ndarray):
+    """
+    Returns the first orderderivatives of the shape functions, 
+    evaluated at multiple points, according to 'pcoords'.
+    
+    ---
+    (nP, nNE, 2)
+    """
     nP = pcoords.shape[0]
     res = np.zeros((nP, 9, 2), dtype=pcoords.dtype)
     for iP in prange(nP):
         res[iP] = dshp_Q9(pcoords[iP])
-    return res
+    return res 
 
 
 class Q9(BiQuadraticQuadrilateral):

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from dewloosh.geom.cells.l2 import L2
 from dewloosh.geom.cells.l2 import L2 as Line
+from dewloosh.geom.cells.l3 import L3
+from dewloosh.geom.cells.l3 import L3 as QuadraticLine
 from dewloosh.geom.cells.t3 import T3
 from dewloosh.geom.cells.t3 import T3 as Tri
 from dewloosh.geom.cells.q4 import Q4

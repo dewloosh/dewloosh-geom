@@ -110,7 +110,7 @@ class PolyData(Library):
             if root.cell_index_manager is not None:
                 GIDs = np.array(
                     root.cell_index_manager.generate(topo.shape[0]))
-                self.celldata = celltype(wrap=ak.zip({'nodes': topo, 'GID': GIDs},
+                self.celldata = celltype(wrap=ak.zip({'nodes': topo, 'id': GIDs},
                                                      depth_limit=1),
                                          pointdata=root.pointdata)
             else:
@@ -214,7 +214,7 @@ class PolyData(Library):
         else:
             topo = np.vstack(topo)
             if return_inds:
-                inds = list(map(lambda i: i.celldata.GID.to_numpy(), blocks))
+                inds = list(map(lambda i: i.celldata.id.to_numpy(), blocks))
                 return topo, np.concatenate(inds)
             else:
                 return topo
@@ -307,19 +307,37 @@ class PolyData(Library):
     def index_of_closest_cell(self, target, *args, **kwargs):
         return index_of_closest_point(self.centers(), target)
 
-    def set_nodal_distribution_factors(self, *args, assume_regular=False, key='ndf', **kwargs):
-        volumes = self.volumes()
+    def set_nodal_distribution_factors(self, *args, **kwargs):        
+        self.nodal_distribution_factors(*args, store=True, **kwargs)
+        
+    def nodal_distribution_factors(self, *args, assume_regular=False,
+                                   key='ndf', store=False, measure='volume', 
+                                   load=None, weights=None, **kwargs):
+        if load is not None:
+            if isinstance(load, str):
+                blocks = self.cellblocks(inclusive=True)
+                def foo(b): return b.celldata._wrapped[load].to_numpy()
+                return np.vstack(list(map(foo, blocks)))
+        
         topo, inds = self.topology(return_inds=True)
+        
+        if measure == 'volume':
+            weights = self.volumes()
+        elif measure == 'uniform':
+            weights = np.ones(topo.shape[0], dtype=float)
+        
         argsort = np.argsort(inds)
         topo = topo[argsort]
-        volumes = volumes[argsort]
+        weights = weights[argsort]
         if not assume_regular:
             topo, _ = regularize(topo)
-        factors = nodal_distribution_factors(topo, volumes)
-        blocks = self.cellblocks(inclusive=True)
-        def foo(b): return b.celldata.set_nodal_distribution_factors(
-            factors, key=key)
-        list(map(foo, blocks))
+        factors = nodal_distribution_factors(topo, weights)
+        if store:
+            blocks = self.cellblocks(inclusive=True)
+            def foo(b): return b.celldata.set_nodal_distribution_factors(
+                factors, key=key)
+            list(map(foo, blocks))
+        return factors
 
     def to_vtk(self, deepcopy=True, fuse=True):
         if not __hasvtk__:
@@ -382,7 +400,7 @@ class PolyData(Library):
         if self._root.cell_index_manager is not None and self.celldata is not None:
             GIDs = np.array(
                 self._root.cell_index_manager.generate(len(self.celldata)))
-            self.celldata['GID'] = GIDs
+            self.celldata['id'] = GIDs
 
     def __repr__(self):
         return 'PolyData(%s)' % (dict.__repr__(self))

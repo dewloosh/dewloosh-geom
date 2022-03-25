@@ -37,6 +37,6 @@ class CellData(Wrapper):
 
     def set_nodal_distribution_factors(self, factors, key='ndf'):
         if len(factors) != len(self._wrapped):
-            self._wrapped[key] = factors[self._wrapped.GID]
+            self._wrapped[key] = factors[self._wrapped.id]
         else:
             self._wrapped[key] = factors

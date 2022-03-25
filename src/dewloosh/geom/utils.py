@@ -258,7 +258,7 @@ def _cells_data_to_jagged(data, widths):
 
 
 @njit(nogil=True, cache=__cache)
-def _cells_around_(centers: np.ndarray, r_max: float):
+def _cells_around_ST_(centers: np.ndarray, r_max: float):
     res = nbDict.empty(
         key_type=nbint64,
         value_type=nbint64A,
@@ -657,8 +657,9 @@ def lengths_of_lines(coords: ndarray, topo: ndarray):
 def lengths_of_lines2(ecoords: ndarray):
     nE, nNE = ecoords.shape[:2]
     res = np.zeros(nE, dtype=ecoords.dtype)
+    _nNE = nNE - 1
     for i in prange(nE):
-        res[i] = norm(ecoords[i, nNE-1] - ecoords[i, 0])
+        res[i] = norm(ecoords[i, _nNE] - ecoords[i, 0])
     return res
 
 
@@ -672,7 +673,21 @@ def distances_of_points(coords: ndarray):
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
-def pcoords_to_coords(pcoords: ndarray, ecoords: ndarray):
+def pcoords_to_coords_1d(pcoords: ndarray, ecoords: ndarray):
+    """
+    Returns a flattened array of points, evaluated at multiple
+    points and cells. 
+    
+    Notes
+    -----
+    It works for arbitrary topologies, but handles every cell as a line
+    going from the firts to the last node of the cell.
+    
+    pcoords (nP,)
+    ecoords (nE, 2+, nD)
+    ---
+    (nE * nP, nD)
+    """
     nP = pcoords.shape[0]
     nE = ecoords.shape[0]
     nX = nE * nP

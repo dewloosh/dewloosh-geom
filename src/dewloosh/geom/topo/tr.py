@@ -4,7 +4,7 @@ import numpy as np
 from numba import njit, prange
 from typing import Union, Sequence
 from collections import Iterable
-from numpy import ndarray
+from numpy import ndarray, newaxis
 from concurrent.futures import ThreadPoolExecutor
 
 from ..tri.triutils import edges_tri
@@ -174,6 +174,22 @@ def Q4_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,
         return coords, + transform_topo(topo, path, *args, **kwargs)
     else:
         return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
+
+
+def L2_to_L3(coords: ndarray, topo: ndarray, order='ikj'):
+    nP = len(coords)
+    nodes, nodeIDs = unique_topo_data(topo[:, newaxis, :])
+    new_coords = np.mean(coords[nodes], axis=1)
+    new_topo = nodeIDs + nP
+    topo = np.hstack((topo, new_topo))
+    coords = np.vstack((coords, new_coords))
+    if order == 'ikj':
+        _buf = np.copy(topo[:, 1])
+        topo[:, 1] = topo[:, 2]
+        topo[:, 2] = _buf
+    else:
+        raise NotImplementedError
+    return coords, topo
 
 
 def T3_to_T6(coords: ndarray, topo: ndarray):

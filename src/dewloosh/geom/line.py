@@ -30,3 +30,10 @@ class Line(PolyCell1d):
             return lengths * areas
         else:
             return lengths
+        
+        
+class QuadraticLine(Line):
+    
+    NNODE = 3
+    vtkCellType = None
+    

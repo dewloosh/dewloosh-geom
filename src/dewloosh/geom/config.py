@@ -7,12 +7,25 @@ try:
     __hasvtk__ = True
 except Exception:
     __hasvtk__ = False
+    
 try:
     import pyvista as pv
     __haspyvista__ = True
 except Exception:
     __haspyvista__ = False
+    
+try:
+    import matplotlib as mpl
+    __hasmatplotlib__ = True
+except Exception:
+    __hasmatplotlib__ = False
 
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    __hasplotly__ = True
+except Exception:
+    __hasplotly__ = False
 
 def set_config_file(filepath):
     try:
