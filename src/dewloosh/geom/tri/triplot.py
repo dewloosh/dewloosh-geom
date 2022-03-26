@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Callable, Iterable
 import numpy as np
-from matplotlib.collections import PatchCollection
 from functools import partial
 
 from dewloosh.core.tools import issequence
@@ -12,6 +8,13 @@ from dewloosh.core.tools import issequence
 from .triang import triobj_to_mpl, get_triobj_data, triangulate
 from .triutils import offset_tri
 from ..utils import cells_coords, explode_mesh_data_bulk
+
+from ..config import __hasmatplotlib__
+if __hasmatplotlib__:
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    from matplotlib.collections import PatchCollection
 
 
 __all__ = ['triplot']

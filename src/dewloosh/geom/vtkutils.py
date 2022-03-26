@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-try:
+
+from .config import __hasvtk__
+if __hasvtk__:
     import vtk
     from vtk.util.numpy_support import numpy_to_vtk as np2vtk, \
         numpy_to_vtkIdTypeArray as np2vtkId
-    __hasvtk__ = True
-except Exception:
-    __hasvtk__ = False
 
 
 def mesh_to_vtkdata(coords, topo, deepcopy=True):

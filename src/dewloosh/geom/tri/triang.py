@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import matplotlib.tri as tri
+
 import scipy.spatial
 from scipy.spatial.qhull import Delaunay as spDelaunay
 
 from ..topo import unique_topo_data
 from .triutils import edges_tri
 
-try:
+from ..config import __hasvtk__, __haspyvista__, __hasmatplotlib__
+if __hasvtk__:
     from vtk import vtkIdList
-    __hasvtk__ = True
-except Exception:
-    __hasvtk__ = False
-try:
+if __haspyvista__:
     import pyvista as pv
-    __haspyvista__ = True
-except Exception:
-    __haspyvista__ = False
-
-
+if __hasmatplotlib__:
+    import matplotlib.tri as tri
+    
+    
 __all__ = ['triangulate']
  
 

@@ -27,6 +27,7 @@ try:
 except Exception:
     __hasplotly__ = False
 
+
 def set_config_file(filepath):
     try:
         import vtk
