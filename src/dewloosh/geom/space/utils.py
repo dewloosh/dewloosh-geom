@@ -4,8 +4,10 @@ from numpy import ndarray
 from numba import njit, prange
 
 from dewloosh.core import squeeze
-from dewloosh.math.linalg import normalize
+
+from dewloosh.math.linalg import normalize, normalize2d
 from dewloosh.math.array import atleast2d
+
 from ..utils import center_of_points, cell_center, cell_coords
     
 __cache = True
@@ -215,4 +217,38 @@ def is_planar_surface(normals: ndarray, tol=1e-8):
     return diffs.max() <= tol
 
 
+@njit(nogil=True, parallel=True, cache=__cache)
+def is_line(coords: ndarray, tol=1e-8):
+    """
+    Returns true if all the normals point in the same direction.
+    The provided normal vectors are assumed to be normalized.
+    
+    Parameters
+    ----------
+    coords : numpy.ndarray
+        2d float array of point coordinates
+        
+    tol : float
+        Floating point tolerance as maximum deviation.
 
+    Returns:
+    --------        
+    Bool
+        True if all absolute deviations from the line between the first 
+        and the last point is smaller than 'tol'.
+    """
+    nP = coords.shape[0]
+    c = normalize2d(move_points(coords, -coords[0]))
+    d = c[-1] - c[0]
+    diffs = np.zeros(nP, dtype=coords.dtype)
+    for i in prange(1, nP):
+        diffs[i] = np.abs(c[i] @ d)
+    return diffs.max() <= tol
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def move_points(coords: ndarray, p: ndarray):
+    res = np.zeros_like(coords)
+    for i in prange(coords.shape[0]):
+        res[i] = coords[i] + p
+    return res

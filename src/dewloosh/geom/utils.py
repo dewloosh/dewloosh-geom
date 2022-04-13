@@ -585,7 +585,7 @@ def explode_mesh_data_bulk(coords: ndarray, topo: ndarray, data: ndarray):
         ii = i*nNE
         for j in prange(nNE):
             coords_[ii + j] = coords[topo[i, j]]
-            data_[ii + j] = data[i, topo[i, j]]
+            data_[ii + j] = data[i, j]
             topo_[i, j] = ii + j
     return coords_, topo_, data_
 
