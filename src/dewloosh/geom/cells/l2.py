@@ -105,7 +105,7 @@ class L2(Line):
     def lcenter(cls, *args, **kwargs):
         return np.array([0.])
 
-    def shape_function_values(self, coords, *args, **kwargs):
+    """def shape_function_values(self, coords, *args, **kwargs):
         if len(coords.shape) == 2:
             return shp2_bulk(coords)
         else:
@@ -115,7 +115,7 @@ class L2(Line):
         if len(coords.shape) == 2:
             return dshp2_bulk(coords)
         else:
-            return dshp2(coords)
+            return dshp2(coords)"""
 
     def volumes(self, *args, **kwargs):
         lengths = self.lengths(*args, **kwargs)
