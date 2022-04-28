@@ -128,7 +128,7 @@ class CartesianFrame(ReferenceFrame):
             
         frame : ReferenceFrame, Optional
             A frame in which the input is defined if it is not a Vector.
-            Default is None.
+            Default is None, which assumes the root frame.
 
         Returns
         -------
