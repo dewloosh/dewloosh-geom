@@ -117,13 +117,13 @@ class L2(Line):
         else:
             return dshp2(coords)"""
 
-    def volumes(self, *args, **kwargs):
+    """def volumes(self, *args, **kwargs):
         lengths = self.lengths(*args, **kwargs)
-        if 'area' in self.fields:
-            areas = self.area.to_numpy()
+        if 'areas' in self.fields:
+            areas = self.areas.to_numpy()
             return lengths * areas
         else:
-            return lengths
+            return lengths"""
 
     def jacobian_matrix(self, *args, dshp=None, **kwargs):
         assert dshp is not None

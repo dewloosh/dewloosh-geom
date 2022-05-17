@@ -541,6 +541,14 @@ def nodal_distribution_factors(topo: ndarray, volumes: ndarray):
 
 
 @njit(nogil=True, parallel=True, cache=__cache)
+def nodal_distribution_factors_v2(topo: ndarray, volumes: ndarray):
+    """The j-th factor of the i-th row is the contribution of
+    element i to the j-th node. Assumes a regular topology."""
+    ndf = nodal_distribution_factors(topo, volumes)
+    return ndf
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
 def distribute_nodal_data(data: ndarray, topo: ndarray, ndf: ndarray):
     nE, nNE = topo.shape
     res = np.zeros((nE, nNE, data.shape[1]))
@@ -708,6 +716,13 @@ def norms(a: np.ndarray):
     return np.sqrt(res)
 
 
-
-
+@njit(nogil=True, parallel=True, cache=__cache)
+def homogenize_nodal_values(data: ndarray, measure: ndarray):
+    # nE, nNE, nDATA
+    nE, _, nDATA = data.shape
+    res = np.zeros((nE, nDATA), dtype=data.dtype)
+    for i in prange(nE):
+        for j in prange(nDATA):
+            res[i, j] = np.sum(data[i, :, j]) / measure[i]
+    return res
 

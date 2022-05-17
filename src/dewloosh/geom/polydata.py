@@ -38,10 +38,11 @@ VectorLike = Union[Vector, ndarray]
 
 
 class PolyData(Library):
-
     """
     A class to handle complex polygonal data.
     """
+
+    _point_cls_ = PointCloud
 
     def __init__(self, *args, coords=None, topo=None, celltype=None,
                  frame: FrameLike = None, newaxis: int = 2, **kwargs):
@@ -58,6 +59,7 @@ class PolyData(Library):
         self._frame = frame
 
         # set coordinates
+        point_cls = self.__class__._point_cls_
         if coords is not None:
             assert self.is_root(), "Currently only the top-level structure \
                 (root) can hold onto point data."
@@ -71,11 +73,11 @@ class PolyData(Library):
                             _c = np.zeros((nP, 3))
                             _c[:, inds] = coords
                             coords = _c
-                            coords = PointCloud(coords, frame=frame).show()
+                            coords = point_cls(coords, frame=frame).show()
                         elif len(frame) == 2:
-                            coords = PointCloud(coords, frame=frame).show()
+                            coords = point_cls(coords, frame=frame).show()
                 elif nD == 3:
-                    coords = PointCloud(coords, frame=frame).show()
+                    coords = point_cls(coords, frame=frame).show()
                 activity = np.ones(nP, dtype=bool)
                 self.pointdata = ak.zip(
                     {'x': coords, 'active': activity}, depth_limit=1)
@@ -157,7 +159,7 @@ class PolyData(Library):
             coords = self.pointdata.x.to_numpy()
             frame = self.frame
             frame = gen_frame(coords) if frame is None else frame
-            return PointCloud(coords, frame=frame)
+            return self.__class__._point_cls_(coords, frame=frame)
         else:
             # returns a sorted array of unique indices
             inds = np.unique(self.topology())
@@ -285,7 +287,7 @@ class PolyData(Library):
     def areas(self, *args, **kwargs):
         coords = self.root().coords()
         blocks = self.cellblocks(*args, inclusive=True, **kwargs)
-        blocks2d = filter(lambda b: b.celltype.NDIM == 2, blocks)
+        blocks2d = filter(lambda b: b.celltype.NDIM < 3, blocks)
         amap = map(lambda b: b.celldata.areas(coords=coords), blocks2d)
         return np.concatenate(list(amap))
 
@@ -307,25 +309,25 @@ class PolyData(Library):
     def index_of_closest_cell(self, target, *args, **kwargs):
         return index_of_closest_point(self.centers(), target)
 
-    def set_nodal_distribution_factors(self, *args, **kwargs):        
+    def set_nodal_distribution_factors(self, *args, **kwargs):
         self.nodal_distribution_factors(*args, store=True, **kwargs)
-        
+
     def nodal_distribution_factors(self, *args, assume_regular=False,
-                                   key='ndf', store=False, measure='volume', 
+                                   key='ndf', store=False, measure='volume',
                                    load=None, weights=None, **kwargs):
         if load is not None:
             if isinstance(load, str):
                 blocks = self.cellblocks(inclusive=True)
                 def foo(b): return b.celldata._wrapped[load].to_numpy()
                 return np.vstack(list(map(foo, blocks)))
-        
+
         topo, inds = self.topology(return_inds=True)
-        
+
         if measure == 'volume':
             weights = self.volumes()
         elif measure == 'uniform':
             weights = np.ones(topo.shape[0], dtype=float)
-        
+
         argsort = np.argsort(inds)
         topo = topo[argsort]
         weights = weights[argsort]
