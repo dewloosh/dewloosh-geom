@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import awkward as ak
 from typing import Iterable
 from copy import copy
 from typing import Union
@@ -23,6 +22,8 @@ from .utils import index_of_closest_point, nodal_distribution_factors
 from .topo import regularize, nodal_adjacency, cells_at_nodes
 from .space import PointCloud
 from .topo.topologyarray import TopologyArray
+from .pointdata import PointData
+from .celldata import CellData
 
 from .config import __hasvtk__, __haspyvista__
 if __hasvtk__:
@@ -37,87 +38,103 @@ def gen_frame(coords): return CartesianFrame(dim=coords.shape[1])
 VectorLike = Union[Vector, ndarray]
 
 
+def find_pointdata_in_args(*args):
+    list(filter(lambda i: isinstance(i, PointData)))
+
+
 class PolyData(Library):
     """
-    A class to handle complex polygonal data.
+    A class to handle complex polygonal meshes.
+
+    The `PolyData` class is arguably the most important class
+    in the geometry submodule. It manages polygons of different
+    kinds as well their data in a memory efficient way.
+
+    The implementation is based on the `awkward` library, which provides 
+    memory-efficient, numba-jittable data classes to deal with dense, sparse, 
+    complete or incomplete data. These data structures are managed in pure
+    Python by the `Library` class.
+
+    Notes
+    -----
+    This class is the base class for all finite-element mesh classes
+    in `dewloosh.solid`.
+
+    Examples
+    --------
+    >>> from dewloosh.geom import PolyData
+    >>> from dewloosh.geom.rgrid import grid
+    >>> size = Lx, Ly, Lz = 100, 100, 100
+    >>> shape = nx, ny, nz = 10, 10, 10
+    >>> coords, topo = grid(size=size, shape=shape, eshape='H27')
+    >>> pd = PolyData(coords=coords)
+    >>> pd['A']['Part1'] = PolyData(topo=topo[:10])
+    >>> pd['B']['Part2'] = PolyData(topo=topo[10:-10])
+    >>> pd['C']['Part3'] = PolyData(topo=topo[-10:])
+    
     """
 
-    _point_cls_ = PointCloud
+    _point_array_class_ = PointCloud
+    _point_class_ = PointData
+    _cell_classes_ = {
+        8: HexaHedron,
+        6: Wedge,
+        4: Quadrilateral,
+        3: Triangle,
+        27: TriquadraticHexaHedron,
+    }
 
-    def __init__(self, *args, coords=None, topo=None, celltype=None,
-                 frame: FrameLike = None, newaxis: int = 2, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, pd=None, cd=None, *args, coords=None, topo=None, 
+                 celltype=None, frame: FrameLike = None, newaxis: int = 2, 
+                 cell_fields=None, point_fields=None, **kwargs):          
         self.pointdata = None
         self.celldata = None
+        if isinstance(pd, PointData):
+            self.pointdata = pd
+            if isinstance(cd, CellData):
+                self.celldata = cd
+        elif isinstance(pd, CellData):
+            self.celldata = pd 
+            if isinstance(cd, PointData):
+                self.pointdata = cd
         self.celltype = None
         self.cell_index_manager = None
-
-        # coordinate frame
-        if not isinstance(frame, FrameLike):
-            if coords is not None:
-                frame = gen_frame(coords)
         self._frame = frame
+        
+        super().__init__(*args, **kwargs)
 
-        # set coordinates
-        point_cls = self.__class__._point_cls_
-        if coords is not None:
+        if self.pointdata is None and coords is not None:    
+            point_fields = {} if point_fields is None else point_fields
+            pointtype = self.__class__._point_class_
             assert self.is_root(), "Currently only the top-level structure \
-                (root) can hold onto point data."
-            if isinstance(coords, np.ndarray):
-                nP, nD = coords.shape
-                if nD == 2:
-                    inds = [0, 1, 2]
-                    inds.pop(newaxis)
-                    if isinstance(frame, FrameLike):
-                        if len(frame) == 3:
-                            _c = np.zeros((nP, 3))
-                            _c[:, inds] = coords
-                            coords = _c
-                            coords = point_cls(coords, frame=frame).show()
-                        elif len(frame) == 2:
-                            coords = point_cls(coords, frame=frame).show()
-                elif nD == 3:
-                    coords = point_cls(coords, frame=frame).show()
-                activity = np.ones(nP, dtype=bool)
-                self.pointdata = ak.zip(
-                    {'x': coords, 'active': activity}, depth_limit=1)
-                self.cell_index_manager = IndexManager()
-            else:
-                raise NotImplementedError
+                (root) can hold onto point-like data."
+            self.pointdata = pointtype(coords=coords, frame=frame, 
+                                       newaxis=newaxis, stateful=True, 
+                                       fields=point_fields)
+            self.cell_index_manager = IndexManager()
 
-        # set topology
-        if topo is not None:
+        
+        if self.celldata is None and topo is not None:
+            cell_fields = {} if cell_fields is None else cell_fields
             if celltype is None:
-                if isinstance(topo, np.ndarray):
-                    nNode = topo.shape[1]
-                    if nNode == 8:
-                        celltype = HexaHedron
-                    elif nNode == 6:
-                        celltype = Wedge
-                    elif nNode == 4:
-                        celltype = Quadrilateral
-                    elif nNode == 3:
-                        celltype = Triangle
-                    elif nNode == 27:
-                        celltype = TriquadraticHexaHedron
-                else:
-                    raise NotImplementedError
-            assert celltype is not None
+                celltype = self.__class__._cell_classes_.get(
+                    topo.shape[1], None)
+            if not issubclass(celltype, CellData):
+                raise TypeError("Invalid cell type <{}>".format(celltype))
+            #assert celltype is not None
 
             root = self.root()
+            pd=root.pointdata
             if isinstance(topo, np.ndarray):
                 topo = topo.astype(int)
             else:
                 raise TypeError("Topo must be an 1d array of integers.")
+
             if root.cell_index_manager is not None:
                 GIDs = np.array(
                     root.cell_index_manager.generate(topo.shape[0]))
-                self.celldata = celltype(wrap=ak.zip({'nodes': topo, 'id': GIDs},
-                                                     depth_limit=1),
-                                         pointdata=root.pointdata)
-            else:
-                self.celldata = celltype(wrap=ak.zip({'nodes': topo}, depth_limit=1),
-                                         pointdata=root.pointdata)
+                cell_fields['id'] = GIDs            
+            self.celldata = celltype(topo, fields=cell_fields, pointdata=pd)
             self.celltype = celltype
 
     def blocks(self, *args, inclusive=False, blocktype=None, deep=True, **kwargs):
@@ -159,7 +176,7 @@ class PolyData(Library):
             coords = self.pointdata.x.to_numpy()
             frame = self.frame
             frame = gen_frame(coords) if frame is None else frame
-            return self.__class__._point_cls_(coords, frame=frame)
+            return self.__class__._point_array_class_(coords, frame=frame)
         else:
             # returns a sorted array of unique indices
             inds = np.unique(self.topology())

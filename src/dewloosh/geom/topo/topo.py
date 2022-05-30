@@ -574,11 +574,12 @@ def unique_topo_data(topo3d: TopoLike):
     Returns
     -------
     numpy.ndarray
-        Integer array of indices, representing unique elements.
+        The sorted unique topolical entities as integer arrays 
+        of node indices.
 
     numpy.ndarray
         Indices of the unique array, that can be used to 
-        reconstruct `topo`.
+        reconstruct `topo`. See the examples.
         
     Examples
     --------
@@ -586,9 +587,26 @@ def unique_topo_data(topo3d: TopoLike):
         
     >>> from dewloosh.geom.rgrid import grid
     >>> from dewloosh.geom.topo.topodata import edges_Q4
+    
     >>> coords, topo = grid(size=(1, 1), shape=(10, 10), eshape='Q4')
-    >>> edges, edgeIDs = unique_topo_data(edges_Q4(topo))
-        
+    
+    To get a 3d integer array listing all the edges of all quads:
+    
+    >>> edges3d = edges_Q4(topo)
+    
+    To find the unique edges of the mesh:
+    
+    >>> edges, edgeIDs = unique_topo_data(edges3d)
+    
+    Then, to reconstruct `edges3d`, we would do
+    
+    >>> edges3d_ = np.zeros_like(edges3d)
+    >>> for i in range(edgeIDs.shape[0]):
+    >>>     for j in range(edgeIDs.shape[1]):
+    >>>         edges3d_[i, j, :] = edges[edgeIDs[i, j]]        
+    >>> assert np.all(edges3d == edges3d_)
+    True
+    
     """
     if isinstance(topo3d, ndarray):
         nE, nD, nN = topo3d.shape
@@ -599,7 +617,6 @@ def unique_topo_data(topo3d: TopoLike):
         return topo3d, topoIDs
     elif isinstance(topo3d, JaggedArray):
         raise NotImplementedError
-
 
 """
 def unique_lines(lines : np.ndarray):

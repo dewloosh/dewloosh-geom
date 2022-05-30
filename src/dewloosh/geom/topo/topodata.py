@@ -4,6 +4,13 @@ from numba import njit
 __cache = True
 
 
+edgeIds_H8 = np.array([
+    [0, 1], [1, 2], [2, 3], [3, 0],
+    [4, 5], [5, 6], [6, 7], [7, 4],
+    [0, 4], [1, 5], [2, 6], [3, 7]
+], dtype=int)
+
+
 @njit(nogil=True, cache=__cache)
 def edges_Q4(quads: np.ndarray):
     nE = len(quads)

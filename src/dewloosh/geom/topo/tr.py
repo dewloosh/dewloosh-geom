@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ..tri.triutils import edges_tri
 from ..utils import cells_coords
+from .topodata import edgeIds_H8
 from .topodata import edges_Q4, edges_H8, faces_H8
 from .topo import unique_topo_data
 
@@ -53,11 +54,15 @@ def transform_topo(topo: ndarray, path: ndarray, data: ndarray = None,
 
 
 def transform_topo_data(topo: ndarray, data: ndarray, path: ndarray):
-    assert topo.shape[0] == data.shape[0]
     if data.shape[:2] == topo.shape[:2]:
+        # it is assumed that values are provided for each node of each
+        # cell
         res = repeat_cell_nodal_data(data, path)
-    else:
+    elif data.shape[0] == topo.shape[0]:
+        # assume that data is constant over the elements
         res = np.repeat(data, path.shape[0], axis=0)
+    else:
+        raise NotImplementedError("Invalid data shape {}".format(data.shape))
     return res
 
 
@@ -158,6 +163,26 @@ def H8_to_TET4(coords: ndarray, topo: ndarray, data: DataLike = None,
         return coords, + transform_topo(topo, path, *args, **kwargs)
     else:
         return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
+    
+
+def H8_to_L2(coords: ndarray, topo: ndarray, data: DataLike = None,
+            *args, path: ndarray=None, **kwargs):
+    if isinstance(path, ndarray):
+        assert path.shape[0] == 12, "Invalid shape!"
+        assert path.shape[1] == 2, "Invalid shape!"
+    else:
+        if path is None:
+            path = edgeIds_H8
+        else:
+            raise NotImplementedError("Invalid path!")
+    if data is None:
+        nE = len(topo)
+        nSub, nSubN = path.shape
+        topo = np.reshape(transform_topo(topo, path), (nE, nSub, nSubN))
+        edges, _ = unique_topo_data(topo)
+        return coords, edges
+    else:
+        raise NotImplementedError("Data conversion is not available here!")
 
 
 def Q4_to_T3(coords: ndarray, topo: ndarray, data: DataLike = None,

@@ -2,8 +2,9 @@
 from collections import Iterable
 
 import numpy as np
+from numpy import ndarray
 
-from dewloosh.math.array import atleast1d, atleastnd, ascont
+from dewloosh.math.array import atleast1d
 from dewloosh.math.utils import to_range
 
 from .celldata import CellData
@@ -15,7 +16,11 @@ class PolyCell(CellData):
     NNODE = None
     NDIM = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, topo: ndarray=None, i: ndarray=None, **kwargs):
+        if isinstance(topo, ndarray):
+            kwargs['nodes'] = topo
+        if isinstance(i, ndarray):
+            kwargs['id'] = i
         super().__init__(*args, **kwargs)
         
     def jacobian_matrix(self, *args, dshp=None, ecoords=None, topo=None, **kwargs):

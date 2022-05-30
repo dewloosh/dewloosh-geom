@@ -307,10 +307,37 @@ def index_of_closest_point(coords: ndarray, target: ndarray) -> int:
     int
         The index of `coords`, for which the distance from
         `target` is minimal.
+    
     """
     assert coords.shape[1] == target.shape[0], \
         "The dimensions of `coords` and `target` are not compatible."
     return np.argmin(norm(coords - target, axis=1))
+
+
+def index_of_furthest_point(coords: ndarray, target: ndarray) -> int:
+    """
+    Returs the index of the furthest point to a target.
+    
+    Parameters
+    ----------
+    coords : (nP, nD) numpy.ndarray
+        2d float array of vertex coordinates.
+            nP : number of points in the model
+            nD : number of dimensions of the model space
+            
+    target : numpy.ndarray
+        Coordinate array of the target point.
+
+    Returns
+    -------
+    int
+        The index of `coords`, for which the distance from
+        `target` is maximal.
+    
+    """
+    assert coords.shape[1] == target.shape[0], \
+        "The dimensions of `coords` and `target` are not compatible."
+    return np.argmax(norm(coords - target, axis=1))
 
 
 def points_of_cells(coords: ndarray, topo: ndarray, *args, 
@@ -623,6 +650,15 @@ def avg_cell_data(data: np.ndarray, topo: np.ndarray, squeeze=True):
 
 @njit(nogil=True, parallel=True, cache=__cache)
 def jacobian_matrix_bulk(dshp: ndarray, ecoords: ndarray):
+    """
+    Returns Jacobian matrices of local to global transformation 
+    for several finite elements.
+    
+    dshp (nG, nN, nD)
+    ecoords  (nE, nNE, nD)
+    ---
+    (nE, nG, nD, nD)
+    """
     nE = ecoords.shape[0]
     nG, _, nD = dshp.shape
     jac = np.zeros((nE, nG, nD, nD), dtype=dshp.dtype)
@@ -631,6 +667,42 @@ def jacobian_matrix_bulk(dshp: ndarray, ecoords: ndarray):
         for iG in prange(nG):
             jac[iE, iG] = points @ dshp[iG]
     return jac
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def jacobian_det_bulk_1d(jac: ndarray):
+    nE, nG = jac.shape[:2]
+    res = np.zeros((nE, nG), dtype=jac.dtype)
+    for iE in prange(nE):
+        res[iE, :] = jac[iE, :, 0, 0]
+    return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def jacobian_matrix_bulk_1d(dshp: ndarray, ecoords: ndarray):
+    """
+    Returns the Jacobian matrix for multiple (nE) elements, evaluated at
+    multiple (nP) points.
+    ---
+    (nE, nP, 1, 1)
+    
+    Notes
+    -----
+    As long as the line is straight, it is a constant metric element,
+    and 'dshp' is only required here to provide an output with a correct shape.
+    """
+    lengths = lengths_of_lines2(ecoords)
+    nE = ecoords.shape[0]
+    if len(dshp.shape) > 4:
+        # variable metric element -> dshp (nE, nP, nNE, nDOF, ...)
+        nP = dshp.shape[1]
+    else:
+        # constant metric element -> dshp (nP, nNE, nDOF, ...)
+        nP = dshp.shape[0]
+    res = np.zeros((nE, nP, 1, 1), dtype=dshp.dtype)
+    for iE in prange(nE):
+        res[iE, :, 0, 0] = lengths[iE] / 2
+    return res
 
 
 @njit(nogil=True, parallel=True, cache=__cache)

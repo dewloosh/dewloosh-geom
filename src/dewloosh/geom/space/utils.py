@@ -5,7 +5,7 @@ from numba import njit, prange
 
 from dewloosh.core import squeeze
 
-from dewloosh.math.linalg import normalize, normalize2d
+from dewloosh.math.linalg import normalize, normalize2d, norm2d
 from dewloosh.math.array import atleast2d
 
 from ..utils import center_of_points, cell_center, cell_coords
@@ -217,6 +217,24 @@ def is_planar_surface(normals: ndarray, tol=1e-8):
     return diffs.max() <= tol
 
 
+@njit(nogil=True, cache=__cache)
+def distances_from_point(coords: ndarray, p: ndarray, normalize=False):
+    if normalize:
+        return norm2d(normalize2d(coords - p))
+    else:
+        return norm2d(coords - p)
+
+
+@njit(nogil=True, cache=__cache)
+def index_of_furthest_point(coords: ndarray, p: ndarray):
+    return np.argmax(distances_from_point(coords, p))
+
+
+@njit(nogil=True, cache=__cache)
+def index_of_closest_point(coords: ndarray, p: ndarray):
+    return np.argmin(distances_from_point(coords, p))
+
+
 @njit(nogil=True, parallel=True, cache=__cache)
 def is_line(coords: ndarray, tol=1e-8):
     """
@@ -236,6 +254,7 @@ def is_line(coords: ndarray, tol=1e-8):
     Bool
         True if all absolute deviations from the line between the first 
         and the last point is smaller than 'tol'.
+        
     """
     nP = coords.shape[0]
     c = normalize2d(move_points(coords, -coords[0]))
@@ -243,6 +262,38 @@ def is_line(coords: ndarray, tol=1e-8):
     diffs = np.zeros(nP, dtype=coords.dtype)
     for i in prange(1, nP):
         diffs[i] = np.abs(c[i] @ d)
+    return diffs.max() <= tol
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def is_planar(coords: ndarray, tol=1e-8):
+    """
+    Returns true if all the points fit on a planar surface.
+    
+    Parameters
+    ----------
+    coords : numpy.ndarray
+        2d float array of point coordinates
+        
+    tol : float
+        Floating point tolerance as maximum deviation.
+
+    Returns:
+    --------        
+    Bool
+                
+    """
+    nP = coords.shape[0]
+    dA = distances_from_point(coords, coords[0])
+    iB = np.argmax(dA)
+    dB = distances_from_point(coords, coords[iB])
+    iC = np.argmax(dA + dB)
+    inds = np.array([0, iB, iC])
+    d = np.zeros(3)
+    d[:] = frame_of_plane(coords[inds, :])[1][:, 2]
+    diffs = np.zeros(nP, dtype=coords.dtype)
+    for i in prange(1, nP):
+        diffs[i] = np.abs(coords[i] @ d)
     return diffs.max() <= tol
 
 
