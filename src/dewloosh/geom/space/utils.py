@@ -3,7 +3,7 @@ import numpy as np
 from numpy import ndarray
 from numba import njit, prange
 
-from dewloosh.core import squeeze
+from dewloosh.math import squeeze
 
 from dewloosh.math.linalg import normalize, normalize2d, norm2d
 from dewloosh.math.array import atleast2d

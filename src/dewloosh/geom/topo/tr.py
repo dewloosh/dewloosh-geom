@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ..tri.triutils import edges_tri
 from ..utils import cells_coords
-from .topodata import edgeIds_H8
+from .topodata import edgeIds_TET4, edgeIds_H8
 from .topodata import edges_Q4, edges_H8, faces_H8
 from .topo import unique_topo_data
 
@@ -164,6 +164,26 @@ def H8_to_TET4(coords: ndarray, topo: ndarray, data: DataLike = None,
     else:
         return (coords,) + transform_topo(topo, path, data, *args, **kwargs)
     
+    
+def TET4_to_L2(coords: ndarray, topo: ndarray, data: DataLike = None,
+               *args, path: ndarray=None, **kwargs):
+    if isinstance(path, ndarray):
+        assert path.shape[0] == 6, "Invalid shape!"
+        assert path.shape[1] == 2, "Invalid shape!"
+    else:
+        if path is None:
+            path = edgeIds_TET4()
+        else:
+            raise NotImplementedError("Invalid path!")
+    if data is None:
+        nE = len(topo)
+        nSub, nSubN = path.shape
+        topo = np.reshape(transform_topo(topo, path), (nE, nSub, nSubN))
+        edges, _ = unique_topo_data(topo)
+        return coords, edges
+    else:
+        raise NotImplementedError("Data conversion is not available here!")
+
 
 def H8_to_L2(coords: ndarray, topo: ndarray, data: DataLike = None,
             *args, path: ndarray=None, **kwargs):
@@ -172,7 +192,7 @@ def H8_to_L2(coords: ndarray, topo: ndarray, data: DataLike = None,
         assert path.shape[1] == 2, "Invalid shape!"
     else:
         if path is None:
-            path = edgeIds_H8
+            path = edgeIds_H8()
         else:
             raise NotImplementedError("Invalid path!")
     if data is None:

@@ -4,11 +4,19 @@ from numba import njit
 __cache = True
 
 
-edgeIds_H8 = np.array([
-    [0, 1], [1, 2], [2, 3], [3, 0],
-    [4, 5], [5, 6], [6, 7], [7, 4],
-    [0, 4], [1, 5], [2, 6], [3, 7]
-], dtype=int)
+def edgeIds_TET4():
+    return np.array([
+        [0, 1], [1, 2], [2, 0],
+        [0, 3], [1, 3], [2, 3]
+    ], dtype=int)
+    
+
+def edgeIds_H8():
+    return np.array([
+        [0, 1], [1, 2], [2, 3], [3, 0],
+        [4, 5], [5, 6], [6, 7], [7, 4],
+        [0, 4], [1, 5], [2, 6], [3, 7]
+    ], dtype=int)
 
 
 @njit(nogil=True, cache=__cache)
