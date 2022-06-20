@@ -7,28 +7,26 @@ from dewloosh.math.linalg import Vector
 from dewloosh.geom import TriMesh, PolyData, grid, PointCloud, CartesianFrame
 
 
-def test_coord_tr_1(i, a):
-    A = CartesianFrame(dim=3)
-    coords = PointCloud([
-        [1., 0., 0.],
-        [0., 1., 0.],
-        [0., 0., 1.]
-    ], frame=A)
-    amounts = [0, 0, 0]
-    amounts[i] = a * np.pi / 180
-    B = A.orient_new('Body', amounts, 'XYZ')
-    arr_new = Vector(coords.array, frame=A).view(B)
-    coords_new = Vector(arr_new, frame=B)
-    return np.max(np.abs(coords_new.view() - coords.view())) < 1e-8
-
-
 class TestCoords(unittest.TestCase):
     
     def test_coords_1(self):
+        def test_coord_tr_1(i, a):
+            A = CartesianFrame(dim=3)
+            coords = PointCloud([
+                [1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]
+            ], frame=A)
+            amounts = [0, 0, 0]
+            amounts[i] = a * np.pi / 180
+            B = A.orient_new('Body', amounts, 'XYZ')
+            arr_new = Vector(coords.array, frame=A).view(B)
+            coords_new = Vector(arr_new, frame=B)
+            return np.max(np.abs(coords_new.view() - coords.view())) < 1e-8
         assert test_coord_tr_1(1, 120.)
 
 
-def test_grid_origo_1(dx, dy, dz):
+"""def test_grid_origo_1(dx, dy, dz):
     d = np.array([dx, dy, dz])
     size = Lx, Ly, Lz = 80, 60, 20
     shape = nx, ny, nz = 8, 6, 2
@@ -81,7 +79,7 @@ def test_volume_TET4_1(size, shape):
     V = Lx * Ly * Lz
     if not np.max(np.abs(V - mesh3d.volume())) < 1e-8:
         return False
-    return True
+    return True"""
 
 
 if __name__ == "__main__":
