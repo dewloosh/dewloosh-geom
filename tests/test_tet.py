@@ -1,19 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from hypothesis import given, settings, strategies as st, HealthCheck
 import unittest
 
 from dewloosh.geom import TriMesh, CartesianFrame
 from dewloosh.geom.primitives import circular_disk
-from dewloosh.geom.cells import T3, T6
-
-
-settings.register_profile(
-    "tet_test",
-    max_examples=100,
-    deadline=None,  # ms
-    suppress_health_check=(HealthCheck.too_slow, HealthCheck.data_too_large),
-)
+from dewloosh.geom.cells import T3
 
 
 def test_vol_TET4(Lx, Ly, Lz, nx, ny, nz):
@@ -48,31 +39,11 @@ def test_vol_cylinder_TET4(min_radius, max_radius, height,
 
 class TestTet(unittest.TestCase):
 
-    @given(
-        st.floats(min_value=1., max_value=10.),
-        st.floats(min_value=1., max_value=10.),
-        st.floats(min_value=1., max_value=10.),
-        st.integers(min_value=2, max_value=10),
-        st.integers(min_value=2, max_value=10),
-        st.integers(min_value=2, max_value=10)
-    )
-    @settings(settings.load_profile("tet_test"))
-    def test_vol_TET4(self, Lx, Ly, Lz, nx, ny, nz):
-        assert test_vol_TET4(Lx, Ly, Lz, nx, ny, nz)
+    def test_vol_TET4(self):
+        assert test_vol_TET4(1.0, 1.0, 1.0, 2, 2, 2)
         
-    @given(
-        st.floats(min_value=1., max_value=5.),
-        st.floats(min_value=6., max_value=10.),
-        st.floats(min_value=1., max_value=20.),
-        st.integers(min_value=100, max_value=150),
-        st.integers(min_value=60, max_value=100),
-        st.integers(min_value=2, max_value=10)
-    )
-    @settings(settings.load_profile("tet_test"))
-    def test_vol_cylinder_TET4(self, min_radius, max_radius, height, 
-                               n_angles, n_radii, n_z):
-        assert test_vol_cylinder_TET4(min_radius, max_radius, height, 
-                                      n_angles, n_radii, n_z)
+    def test_vol_cylinder_TET4(self):
+        assert test_vol_cylinder_TET4(1., 10., 10., 120, 80, 5)
 
 
 if __name__ == "__main__":

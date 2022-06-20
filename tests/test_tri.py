@@ -1,19 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from hypothesis import given, settings, strategies as st, HealthCheck
 import unittest
 
 from dewloosh.geom import TriMesh, CartesianFrame
 from dewloosh.geom.primitives import circular_disk
 from dewloosh.geom.cells import T3, T6
-
-
-settings.register_profile(
-    "tri_test",
-    max_examples=100,
-    deadline=None,  # ms
-    suppress_health_check=(HealthCheck.too_slow, HealthCheck.data_too_large),
-)
 
 
 def test_area_T3(Lx, Ly, nx, ny):
@@ -72,45 +63,17 @@ def test_area_circular_disk_T6(min_radius, max_radius, n_angles, n_radii):
 
 class TestTri(unittest.TestCase):
 
-    @given(
-        st.floats(min_value=1., max_value=10.),
-        st.floats(min_value=1., max_value=10.),
-        st.integers(min_value=2, max_value=10),
-        st.integers(min_value=2, max_value=10)
-    )
-    @settings(settings.load_profile("tri_test"))
-    def test_area_T3(self, Lx, Ly, nx, ny):
-        assert test_area_T3(Lx, Ly, nx, ny)
+    def test_area_T3(self):
+        assert test_area_T3(1.0, 1.0, 2, 2)
         
-    @given(
-        st.floats(min_value=1., max_value=10.),
-        st.floats(min_value=1., max_value=10.),
-        st.integers(min_value=2, max_value=10),
-        st.integers(min_value=2, max_value=10)
-    )
-    @settings(settings.load_profile("tri_test"))
-    def test_area_T6(self, Lx, Ly, nx, ny):
-        assert test_area_T6(Lx, Ly, nx, ny)
+    def test_area_T6(self):
+        assert test_area_T6(1.0, 1.0, 2, 2)
 
-    @given(
-        st.floats(min_value=1., max_value=5.),
-        st.floats(min_value=6., max_value=10.),
-        st.integers(min_value=100, max_value=150),
-        st.integers(min_value=60, max_value=100)
-    )
-    @settings(settings.load_profile("tri_test"))
-    def test_area_circular_disk_T3(self, min_radius, max_radius, n_angles, n_radii):
-        assert test_area_circular_disk_T3(min_radius, max_radius, n_angles, n_radii)
+    def test_area_circular_disk_T3(self):
+        assert test_area_circular_disk_T3(1., 10., 120, 80)
         
-    @given(
-        st.floats(min_value=1., max_value=5.),
-        st.floats(min_value=6., max_value=10.),
-        st.integers(min_value=100, max_value=150),
-        st.integers(min_value=60, max_value=100)
-    )
-    @settings(settings.load_profile("tri_test"))
-    def test_area_circular_disk_T6(self, min_radius, max_radius, n_angles, n_radii):
-        assert test_area_circular_disk_T6(min_radius, max_radius, n_angles, n_radii)
+    def test_area_circular_disk_T6(self):
+        assert test_area_circular_disk_T6(1., 10., 120, 80)
 
 
 if __name__ == "__main__":

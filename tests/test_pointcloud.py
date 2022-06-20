@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from hypothesis import given, strategies as st
 import unittest
 
 from dewloosh.geom import PointCloud, triangulate
@@ -36,11 +35,7 @@ def test_pointcloud_path_1():
 
 
 class TestPointCloud(unittest.TestCase):
-                   
-    #@given(st.integers(min_value=0, max_value=2), st.floats(min_value=0., max_value=360.))
-    #def test_coord_tr_1(self, i, a):
-    #    assert test_coord_tr_1(i, a)
-        
+                           
     def test_pointcloud_basic(self):
         assert test_pointcloud_basic()
         
@@ -49,8 +44,5 @@ class TestPointCloud(unittest.TestCase):
         
                     
 if __name__ == "__main__":  
-    
-    assert test_pointcloud_basic()
-    assert test_pointcloud_path_1()
-    
+        
     unittest.main()

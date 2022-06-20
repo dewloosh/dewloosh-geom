@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from hypothesis import given, strategies as st
 import unittest
 
 from dewloosh.math.linalg import Vector
@@ -24,10 +23,9 @@ def test_coord_tr_1(i, a):
 
 
 class TestCoords(unittest.TestCase):
-
-    @given(st.integers(min_value=0, max_value=2), st.floats(min_value=0., max_value=360.))
-    def test_coords_1(self, i, a):
-        assert test_coord_tr_1(i, a)
+    
+    def test_coords_1(self):
+        assert test_coord_tr_1(1, 120.)
 
 
 def test_grid_origo_1(dx, dy, dz):
@@ -88,14 +86,5 @@ def test_volume_TET4_1(size, shape):
 
 if __name__ == "__main__":
 
-    assert test_grid_origo_1(1., 1., 1.)
-    assert test_coord_tr_1(2, 30)
-
-    A = CartesianFrame(dim=3)
-    mesh = TriMesh(size=(800, 600), shape=(10, 10), frame=A)
-   
-    assert test_volume_TET4_1(size=(1, 1, 1), shape=(2, 2, 2))
-    
-    assert test_volume_H8_1(size=(1, 1, 1), shape=(2, 2, 2))
     
     unittest.main()

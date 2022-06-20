@@ -1,18 +1,9 @@
 # -*- coding: utf-8 -*-
-from hypothesis import settings, HealthCheck
 import unittest
 
 from dewloosh.geom import triangulate, grid
 from dewloosh.geom.topo.tr import T3_to_T6, T6_to_T3, Q9_to_Q4, Q4_to_T3, \
     Q4_to_Q9, H8_to_H27, Q4_to_Q8, Q9_to_T6, H8_to_TET4
-
-
-settings.register_profile(
-    "test_topo_tr",
-    max_examples=100,
-    deadline=None,  # ms
-    suppress_health_check=(HealthCheck.too_slow, HealthCheck.data_too_large),
-)
 
 
 def test_1(Lx, Ly, nx, ny):
@@ -77,33 +68,25 @@ def test_6(Lx, Ly, Lz, nx, ny, nz):
 
 class TestTopoTR(unittest.TestCase):
 
-    @settings(settings.load_profile("test_topo_tr"))
     def test_1(self):
         assert test_1(1, 1, 10, 10)
 
-    @settings(settings.load_profile("test_topo_tr"))
     def test_2(self):
         assert test_2(1, 1, 10, 10)
 
-    @settings(settings.load_profile("test_topo_tr"))
     def test_3(self):
         assert test_3(1, 1, 10, 10)
         
-    @settings(settings.load_profile("test_topo_tr"))
     def test_4(self):
         assert test_4(1, 1, 10, 10)
         
-    @settings(settings.load_profile("test_topo_tr"))
     def test_5(self):
         assert test_5(1, 1, 1, 10, 10, 10)
         
-    @settings(settings.load_profile("test_topo_tr"))
     def test_6(self):
         assert test_6(1, 1, 1, 10, 10, 10)
 
 
 if __name__ == "__main__":
-
-    #assert test_2(1, 1, 10, 10)
 
     unittest.main()
