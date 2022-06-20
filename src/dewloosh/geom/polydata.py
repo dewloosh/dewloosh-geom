@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Iterable
 from copy import copy
-from typing import Union
+from typing import Union, Hashable
 from numpy import ndarray
 import numpy as np
 
@@ -413,9 +413,8 @@ class PolyData(Library):
             poly.plot(*args, show_edges=show_edges, notebook=notebook,
                       **kwargs)
 
-    def __join_parent__(self, parent: Library):
-        self.parent = parent
-        self._root = parent.root()
+    def __join_parent__(self, parent: Library, key: Hashable = None):
+        super().__join_parent__(parent, key)
         if self._root.cell_index_manager is not None and self.celldata is not None:
             GIDs = np.array(
                 self._root.cell_index_manager.generate(len(self.celldata)))

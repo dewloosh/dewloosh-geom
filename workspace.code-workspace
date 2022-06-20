@@ -2,18 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "..\\dewloosh-math"
-		},
-		{
-			"path": "..\\dewloosh-cv"
-		},
-		{
-			"path": "..\\pyaxisvm"
-		},
-		{
-			"path": "..\\dewloosh-core"
 		}
 	],
 	"settings": {}

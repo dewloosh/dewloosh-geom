@@ -26,7 +26,7 @@ def test_coord_tr_1(i, a):
 class TestCoords(unittest.TestCase):
 
     @given(st.integers(min_value=0, max_value=2), st.floats(min_value=0., max_value=360.))
-    def test_coord_tr_1(self, i, a):
+    def test_coords_1(self, i, a):
         assert test_coord_tr_1(i, a)
 
 

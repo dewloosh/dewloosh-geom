@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.0.1-alpha6"
+__version__ = "0.0.1b"
 __description__ = "A Python package to build, manipulate and analyze polygonal meshes."
 
 from dewloosh.geom.space import PointCloud

@@ -15,6 +15,7 @@ from dewloosh.core.tools import issequence
 from dewloosh.math.array import minmax
 from dewloosh.math.linalg.vector import VectorBase, Vector
 from dewloosh.math.linalg.frame import ReferenceFrame as FrameLike
+
 from .frame import CartesianFrame
 
 __cache = True
@@ -47,9 +48,7 @@ def dcoords(coords, v):
 
 
 class PointCloud(Vector):
-    
-    """
-    A class to support calculations related to points in Euclidean space.
+    """A class to support calculations related to points in Euclidean space.
 
     Examples
     --------

@@ -4,7 +4,7 @@ from hypothesis import given, settings, strategies as st, HealthCheck
 import unittest
 
 from dewloosh.geom import TriMesh, CartesianFrame
-from dewloosh.geom.tri.triang import circular_disk
+from dewloosh.geom.primitives import circular_disk
 from dewloosh.geom.cells import T3, T6
 
 

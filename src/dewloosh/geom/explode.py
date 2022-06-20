@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 from numpy import ndarray
 
-from dewloosh.math.array import atleastnd
-
-from dewloosh.geom import PolyData
-
 from .utils import explode_mesh_bulk, explode_mesh_data_bulk
 
 

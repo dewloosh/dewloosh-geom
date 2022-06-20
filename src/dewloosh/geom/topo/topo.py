@@ -6,7 +6,7 @@ from typing import Union, Dict, List, Tuple
 from awkward import Array as akarray
 from scipy.sparse import csr_matrix as csr_scipy
 
-from dewloosh.math.linalg.sparse.csr import csr_matrix
+from dewloosh.math.linalg.sparse import csr_matrix
 from dewloosh.math.linalg.sparse.jaggedarray import JaggedArray
 from dewloosh.math.arraysetops import unique2d
 from dewloosh.math.array import count_cols

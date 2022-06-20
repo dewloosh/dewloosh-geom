@@ -1,0 +1,9 @@
+hypothesis
+flake8 
+pytest 
+pytest-cov
+networkx
+matplotlib
+pyvista
+tetgen
+sectionproperties

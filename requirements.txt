@@ -1,3 +1,5 @@
-dewloosh.math
+packaging
+dewloosh.math>=0.0.1b
 #matplotlib
 #pyvista
+#tetgen
