@@ -5,7 +5,7 @@ from typing import Union, Hashable
 from numpy import ndarray
 import numpy as np
 
-from dewloosh.core import Library
+from dewloosh.core import DeepDict
 from dewloosh.math.linalg import Vector, ReferenceFrame as FrameLike
 from dewloosh.math.linalg.vector import VectorBase
 from dewloosh.math.array import atleast3d, repeat
@@ -42,7 +42,10 @@ def find_pointdata_in_args(*args):
     list(filter(lambda i: isinstance(i, PointData)))
 
 
-class PolyData(Library):
+__all__ = ['PointData']
+
+
+class PolyData(DeepDict):
     """
     A class to handle complex polygonal meshes.
 
@@ -50,15 +53,10 @@ class PolyData(Library):
     in the geometry submodule. It manages polygons of different
     kinds as well their data in a memory efficient way.
 
-    The implementation is based on the `awkward` library, which provides 
+    The implementation is based on the `awkward` DeepDict, which provides 
     memory-efficient, numba-jittable data classes to deal with dense, sparse, 
     complete or incomplete data. These data structures are managed in pure
-    Python by the `Library` class.
-
-    Notes
-    -----
-    This class is the base class for all finite-element mesh classes
-    in `dewloosh.solid`.
+    Python by the `DeepDict` class.
 
     Examples
     --------
@@ -413,7 +411,7 @@ class PolyData(Library):
             poly.plot(*args, show_edges=show_edges, notebook=notebook,
                       **kwargs)
 
-    def __join_parent__(self, parent: Library, key: Hashable = None):
+    def __join_parent__(self, parent: DeepDict, key: Hashable = None):
         super().__join_parent__(parent, key)
         if self._root.cell_index_manager is not None and self.celldata is not None:
             GIDs = np.array(
@@ -460,35 +458,3 @@ class IndexManager(object):
                 self.queue.extend(a)
             else:
                 self.queue.append(a)
-
-
-if __name__ == '__main__':
-
-    from dewloosh.geom.rgrid import grid
-
-    size = Lx, Ly, Lz = 800, 600, 20
-    shape = nx, ny, nz = 8, 6, 2
-    vtkCellType = vtk.VTK_TRIQUADRATIC_HEXAHEDRON
-
-    coords1, topo1 = grid(size=size, shape=shape, eshape='H27')
-    coords2, topo2 = grid(size=size, shape=shape, eshape='H27',
-                          origo=(0, 0, 100))
-    coords = np.vstack([coords1, coords2])
-    topo2 += coords1.shape[0]
-
-    pd = PolyData(coords=coords)
-    pd['group1']['mesh1'] = PolyData(topo=topo1,
-                                     vtkCellType=vtkCellType)
-    pd['group2', 'mesh2'] = PolyData(topo=topo2,
-                                     vtkCellType=vtkCellType)
-
-    pd.plot()
-
-    print('center : {}'.format(pd.center()))
-    print(pd.points().x().min())
-    print(pd.points().x().max())
-    pd.move(np.array([1.0, 0.0, 0.0]))
-    print(pd.points().x().min())
-    print(pd.points().x().max())
-    pd.centralize()
-    print('center : {}'.format(pd.center()))

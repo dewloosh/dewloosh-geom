@@ -23,13 +23,3 @@ def voxelize_cylinder(radius: ndarray, height: float, size: float):
     cond = (r <= radius[1]) & (r >= radius[0])
     inds = np.where(cond)[0]
     return detach_mesh_bulk(coords, topo[inds])
-
-
-if __name__ == '__main__':
-    d = 100.0
-    h = 0.8
-    a = 1.5
-    b = 0.5
-    
-    coords, topo = voxelize_cylinder(radius=[b/2, a/2], height=h, size=h/20)
-    PolyData(coords=coords, topo=topo, celltype=H8).plot()

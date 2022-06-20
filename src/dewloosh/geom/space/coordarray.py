@@ -31,7 +31,7 @@ VectorLike = Union[Vector, ndarray]
 def show_coords(dcm: np.ndarray, coords: np.ndarray):
     res = np.zeros_like(coords)
     for i in prange(coords.shape[0]):
-        res[i] = dcm @ coords[i,:]
+        res[i] = dcm @ coords[i, :]
     return res
 
 
@@ -59,59 +59,59 @@ class PointCloud(Vector):
     >>> coords = PointCloud(coords)
     >>> coords.center()
         array([400., 300.,   0.])
-        
+
     Centralize and get center again:
-    
+
     >>> coords.centralize()
     >>> coords.center()
         array([0., 0., 0.])
-        
+
     Move the points in the global frame:
-    
+
     >>> coords.move(np.array([1., 0., 0.]))    
     >>> coords.center()
         array([1., 0., 0.])
-        
+
     Rotate the points with 90 degrees around global Z.
     Before we do so, let check the boundaries:
-    
+
     >>> coords.x().min(), coords.x().max()
     (-400., 400.)
-    
+
     >>> coords.y().min(), coords.y().max()
     (-300., 300.)
-    
+
     Now centralize wrt. the global frame, rotate and check
     the boundaries again:
-    
+
     >>> coords.rotate('Body', [0, 0, np.pi], 'XYZ')
     >>> coords.center()
         [1., 0., 0.]
-        
+
     >>> coords.x().min(), coords.x().max()
     (-300., 300.)
-    
+
     >>> coords.y().min(), coords.y().max()
     (-400., 400.)
-    
+
     The object keeps track of indices after slicing, always
     referring to the top level array:
-    
+
     >>> coords[10:50][[1, 2, 10]].inds
     array([11, 12, 20])
-    
+
     """
-    
+
     _array_cls_ = VectorBase
     _frame_cls_ = CartesianFrame
-    
+
     def __init__(self, *args, frame=None, inds=None, **kwargs):
         if frame is None:
             if len(args) > 0 and isinstance(args[0], np.ndarray):
                 frame = self._frame_cls_(dim=args[0].shape[1])
         super().__init__(*args, frame=frame, **kwargs)
         self.inds = inds if inds is None else np.array(inds, dtype=int)
-                
+
     def __getitem__(self, key):
         inds = None
         key = (key,) if not isinstance(key, tuple) else key
@@ -125,51 +125,51 @@ class PointCloud(Vector):
         elif issequence(key[0]):
             inds = key[0]
         elif isinstance(key[0], int):
-            inds = [key[0],]
+            inds = [key[0], ]
         if inds is not None and self.inds is not None:
             inds = self.inds[inds]
         arr = self._array.__getitem__(key)
         return PointCloud(arr, frame=self.frame, inds=inds)
-    
-    @property    
+
+    @property
     def frame(self):
         """
         Returns the frame the points are embedded in.
         """
         return self._frame
-    
-    @frame.setter    
+
+    @frame.setter
     def frame(self, target: FrameLike):
         """
         Sets the frame. This changes the frame itself and results 
         in a transformation of coordinates.
-        
+
         Parameters
         ----------
-                   
+
         target : ReferenceFrame
             A target frame of reference.
-            
+
         """
         if isinstance(target, FrameLike):
             self._array = self.show(target)
             self._frame = target
         else:
             raise TypeError('Value must be a {} instance'.format(FrameLike))
-        
-    def x(self, target: FrameLike=None):
+
+    def x(self, target: FrameLike = None):
         arr = self.show(target)
         return arr[:, 0] if len(self.shape) > 1 else arr[0]
-    
-    def y(self, target: FrameLike=None):
+
+    def y(self, target: FrameLike = None):
         arr = self.show(target)
         return arr[:, 1] if len(self.shape) > 1 else arr[1]
-    
-    def z(self, target: FrameLike=None):
+
+    def z(self, target: FrameLike = None):
         arr = self.show(target)
         return arr[:, 2] if len(self.shape) > 1 else arr[2]
-    
-    def bounds(self, target: FrameLike=None):
+
+    def bounds(self, target: FrameLike = None):
         arr = self.show(target)
         dim = arr.shape[1]
         res = np.zeros((dim, 2))
@@ -178,63 +178,63 @@ class PointCloud(Vector):
         if dim > 2:
             res[2] = minmax(arr[:, 2])
         return res
-       
+
     def center(self, target: FrameLike = None):
         """
         Returns the center of the points in a specified frame, 
         or the root frame if there is no target provided.
-        
+
         Parameters
         ----------
-                   
+
         target : ReferenceFrame, Optional
             A frame of reference. Default is None.
-            
+
         Returns
         -------
         VectorBase
             A numpy array.
-        
+
         """
         arr = self.show(target)
-        foo = lambda i : np.mean(arr[:, i])
+        def foo(i): return np.mean(arr[:, i])
         return np.array(list(map(foo, range(self.shape[1]))))
-                   
-    def show(self, target: FrameLike=None):
+
+    def show(self, target: FrameLike = None):
         """
         Returns the coordinates of the points in a specified frame, 
         or the root frame if there is no target provided.
-        
+
         Parameters
         ----------
-                   
+
         target : ReferenceFrame, Optional
             A frame of reference. Default is None.
-            
+
         Returns
         -------
         VectorBase
             A numpy array.
-        
+
         """
         x = super().show(target)
         buf = x + dcoords(x, self.frame.origo(target))
         return self._array_cls_(shape=buf.shape, buffer=buf, dtype=buf.dtype)
-            
-    def move(self, v : VectorLike, frame: FrameLike = None):
+
+    def move(self, v: VectorLike, frame: FrameLike = None):
         """
         Moves the points wrt. to a specified frame, or the root 
         frame if there is no target provided. Returns the object
         for continuation.
-        
+
         Parameters
         ----------
-        
+
         v : Vector or Array, Optional
             An array of a vector. If provided as an array, the `frame`
             argument can be used to specify the parent frame in which the
             motion is tp be understood.
-           
+
         frame : ReferenceFrame, Optional
             A frame in which the input is defined if it is not a Vector.
             Default is None.
@@ -243,7 +243,7 @@ class PointCloud(Vector):
         -------
         ReferenceFrame
             The object the function is called on.
-            
+
         Examples
         --------
         Collect the points of a simple triangulation and get the center:
@@ -253,55 +253,55 @@ class PointCloud(Vector):
         >>> coords = PointCloud(coords)
         >>> coords.center()
             array([400., 300.,   0.])
-            
+
         Move the points and get the center again:
-        
+
         d = np.array(0., 1., 0.)
         >>> coords.move(d).move(d)
         >>> coords.center()
         array([400., 302.,   0.])
-        
+
         """
         if not isinstance(v, Vector):
             v = Vector(v, frame=frame)
         arr = v.show(self.frame)
         self._array += dcoords(self._array, arr)
         return self
-        
+
     def centralize(self, target: FrameLike = None):
         """
         Centralizes the coordinates wrt. to a specified frame,
         or the root frame if there is no target provided.
-        
+
         Returns the object for continuation.
-        
+
         Parameters
         ----------
-                   
+
         target : ReferenceFrame, Optional
             A frame of reference. Default is None.
-            
+
         Returns
         -------
         ReferenceFrame
             The object the function is called on.
-                
+
         """
         return self.move(-self.center(target), target)
-        
+
     def rotate(self, *args, **kwargs):
         """
         Applies a transformation to the coordinates in-place. All arguments
         are passed to `ReferenceFrame.orient_new`, see its docs to know more.
-        
+
         Returns the object for continuation.
-        
+
         Examples
         --------
         To apply a 90 degree rotation about the Z axis:
-        
+
         >>> coords.rotate('Body', [0, 0, np.pi/2], 'XYZ')
-        
+
         """
         if isinstance(args[0], FrameLike):
             self._array = self.show(args[0])
@@ -309,7 +309,7 @@ class PointCloud(Vector):
         else:
             target = self.frame.orient_new(*args, **kwargs)
             return self.rotate(target)
-        
+
 
 class PointCloudType(nbtypes.Type):
     """Numba type."""
@@ -326,23 +326,23 @@ make_attribute_wrapper(PointCloudType, 'inds', 'inds')
 
 @overload_attribute(PointCloudType, 'x')
 def attr_x(arr):
-   def get(arr):
-       return arr.data[:, 0]
-   return get
+    def get(arr):
+        return arr.data[:, 0]
+    return get
 
 
 @overload_attribute(PointCloudType, 'y')
 def attr_y(arr):
-   def get(arr):
-       return arr.data[:, 1]
-   return get
+    def get(arr):
+        return arr.data[:, 1]
+    return get
 
 
 @overload_attribute(PointCloudType, 'z')
 def attr_z(arr):
-   def get(arr):
-       return arr.data[:, 2]
-   return get
+    def get(arr):
+        return arr.data[:, 2]
+    return get
 
 
 @typeof_impl.register(PointCloud)
@@ -386,7 +386,7 @@ def overload_getitem(obj, idx):
             return obj.data[idx]
 
         return dummy_getitem_impl
-    
+
 
 @lower_builtin(PointCloud, nbtypes.Array)
 def lower_type(context, builder, sig, args):
@@ -425,44 +425,14 @@ def box_type(typ, val, c):
     c.pyapi.decref(data_obj)
     c.pyapi.decref(inds_obj)
     return python_obj
-    
+
 
 if __name__ == '__main__':
     from numba import njit
 
     @njit
-    def foo(arr):
-        return arr.inds
-    
-    COORD = PointCloud([[0, 0, 0], [0, 0, 1.], 
-                             [0, 0, 0]],
-                            inds=np.array([0, 1, 2, 3]))
-    print(COORD[:, :].inds)
-    arr1 = COORD[1:]
-    print(arr1.inds)
-    arr2 = arr1[1:]
-    print(arr2.inds)
-    print(COORD.to_numpy())
-    
-    print(foo(COORD))
-    print(type(COORD @ np.eye(3)))
-    
-    from dewloosh.geom.tri import triangulate
-    coords, topo, _ = triangulate(size=(800, 600), shape=(10, 10))
-    coords = PointCloud(coords)
-    print(coords.center())
-    coords.centralize()
-    print(coords.center())
-    
-    frameA = CartesianFrame(axes=np.eye(3), origo=np.array([-500., 0., 0.]))
-    frameB = CartesianFrame(axes=np.eye(3), origo=np.array([+500., 0., 0.]))
-        
-    print("\norigos")
-    print(frameA.origo())
-    print(frameB.origo())
-    
-    print("\ncenters")
-    print("center in global : {}".format(coords.center()))
-    print("center in global : {}".format(coords.center(frameA)))
-    print("center in global : {}".format(coords.center(frameB)))
-    a = 1
+    def foo(arr): return arr.inds
+
+    c = np.array([[0, 0, 0], [0, 0, 1.], [0, 0, 0]])
+    COORD = PointCloud(c, inds=np.array([0, 1, 2, 3]))
+    foo(COORD)

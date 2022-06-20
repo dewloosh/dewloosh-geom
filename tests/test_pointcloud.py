@@ -2,7 +2,7 @@
 import numpy as np
 import unittest
 
-from dewloosh.geom import PointCloud, triangulate
+from dewloosh.geom import PointCloud, triangulate, CartesianFrame
 
 
 class TestPointCloud(unittest.TestCase):
@@ -37,6 +37,29 @@ class TestPointCloud(unittest.TestCase):
             hyp_2 = np.all(np.isclose(np.eye(3), coords.frame.dcm()))
             return hyp_1 & hyp_2
         assert test_pointcloud_path_1()
+        
+    def test_pointcloud_1(self):
+        c = np.array([[0, 0, 0], [0, 0, 1.], [0, 0, 0]])
+        COORD = PointCloud(c, inds=np.array([0, 1, 2, 3]))
+        COORD[:, :].inds
+        arr1 = COORD[1:]
+        arr1.inds
+        arr2 = arr1[1:]
+        arr2.inds
+        COORD.to_numpy()
+        COORD @ np.eye(3)
+        coords, topo, _ = triangulate(size=(800, 600), shape=(10, 10))
+        coords = PointCloud(coords)
+        coords.center()
+        coords.centralize()
+        coords.center()
+        frameA = CartesianFrame(axes=np.eye(3), origo=np.array([-500., 0., 0.]))
+        frameB = CartesianFrame(axes=np.eye(3), origo=np.array([+500., 0., 0.])) 
+        frameA.origo()
+        frameB.origo()
+        coords.center()
+        coords.center(frameA)
+        coords.center(frameB)
         
                     
 if __name__ == "__main__":  

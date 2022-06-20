@@ -45,27 +45,3 @@ def extrude_T3_TET4(points: ndarray, triangles: ndarray,
 def extrude_Q4_H8(coords: ndarray, zopo: ndarray, 
                   h: float=1.0, zres: int=1):
     pass
-
-
-if __name__ == '__main__':
-    from dewloosh.geom.tri.trimesh import circular_disk
-    from dewloosh.geom.polydata import PolyData
-    from dewloosh.geom.cells import tet4
-    from dewloosh.geom.topo import detach_mesh_bulk
-        
-    n_angles = 120
-    n_radii = 60
-    min_radius = 5
-    max_radius = 25
-    h = 20
-    zres = 20
-
-    points, triangles = \
-        circular_disk(n_angles, n_radii, min_radius, max_radius)
-    
-    points, triangles = detach_mesh_bulk(points, triangles)
-        
-    coords, topo = extrude_T3_TET4(points, triangles, h, zres)
-    
-    tetmesh = PolyData(coords=coords, topo=topo, celltype=tet4)
-    tetmesh.plot()

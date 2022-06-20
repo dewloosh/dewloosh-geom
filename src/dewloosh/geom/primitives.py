@@ -138,16 +138,3 @@ def Cylinder(*args, celltype=None, voxelize=False, **kwargs):
                             voxelize=voxelize, **kwargs)
     frame = CartesianFrame(dim=3)
     return PolyData(coords=coords, topo=topo, celltype=celltype, frame=frame)
-
-
-if __name__ == '__main__':
-    trimesh = TriMesh(size=(800, 600), shape=(10, 10))
-    trimesh.plot()
-
-    n_angles = 120
-    n_radii = 60
-    min_radius = 5
-    max_radius = 25
-
-    disk = circular_disk(n_angles, n_radii, min_radius, max_radius)
-    disk.plot()
