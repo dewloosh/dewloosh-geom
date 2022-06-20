@@ -3,7 +3,10 @@
 import numpy as np
 from numba import njit, prange
 from typing import Union, Sequence
-from collections import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 from numpy import ndarray, newaxis
 from concurrent.futures import ThreadPoolExecutor
 

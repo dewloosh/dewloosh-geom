@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-
 import scipy.spatial
-from scipy.spatial.qhull import Delaunay as spDelaunay
-
+try:
+    from scipy.spatial import Delaunay as spDelaunay
+except Exception:
+    from scipy.spatial.qhull import Delaunay as spDelaunay
+    
 from ..topo import unique_topo_data
 from .triutils import edges_tri
 
