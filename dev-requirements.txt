@@ -5,6 +5,4 @@ pytest-cov
 networkx
 matplotlib
 pyvista
-cython
-tetgen
 sectionproperties
