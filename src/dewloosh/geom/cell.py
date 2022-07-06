@@ -3,6 +3,7 @@ try:
     from collections.abc import Iterable
 except ImportError:
     from collections import Iterable
+from typing import Union, MutableMapping
 
 import numpy as np
 from numpy import ndarray
@@ -12,12 +13,17 @@ from dewloosh.math.utils import to_range
 
 from .celldata import CellData
 from .utils import jacobian_matrix_bulk, points_of_cells, pcoords_to_coords_1d
+from .topo import rewire, TopologyArray
+
+
+MapLike = Union[ndarray, MutableMapping]
 
 
 class PolyCell(CellData):
 
     NNODE = None
     NDIM = None
+    vtkCellType = None
 
     def __init__(self, *args, topo: ndarray=None, i: ndarray=None, **kwargs):
         if isinstance(topo, ndarray):
@@ -27,26 +33,69 @@ class PolyCell(CellData):
         super().__init__(*args, **kwargs)
         
     def jacobian_matrix(self, *args, dshp=None, ecoords=None, topo=None, **kwargs):
+        """
+        Returns the jacobian matrix.
+        """
         ecoords = self.local_coordinates(topo=topo) if ecoords is None else ecoords
         return jacobian_matrix_bulk(dshp, ecoords)
     
     def jacobian(self, *args, jac=None, **kwargs):
+        """
+        Returns the jacobian determinant
+        """
         return np.linalg.det(jac)
     
     def points_of_cells(self, *args, target=None, **kwargs):
+        """
+        Returns the points of the cells.
+        """
         assert target is None
         topo = kwargs.get('topo', self.nodes.to_numpy())
         coords = kwargs.get('coords', self.pointdata.x.to_numpy())
         return points_of_cells(coords, topo)
                     
     def local_coordinates(self, *args, **kwargs):
+        """
+        Returns local coordinates of the selection.
+        """
         frames = kwargs.get('frames', self.frames.to_numpy())
         topo = kwargs.get('_topo', self.nodes.to_numpy())
         coords = self.pointdata.x.to_numpy()
         return points_of_cells(coords, topo, local_axes=frames)
     
     def coords(self, *args, **kwargs):
+        """
+        Returns the coordinates of the cells in the selection.
+        
+        """
         return self.points_of_cells(*args, **kwargs)
+    
+    def topology(self) -> TopologyArray:
+        """
+        Returns the numerical representation of the topology of the selection.
+                
+        """
+        if 'nodes' in self.fields:
+            return TopologyArray(self.nodes)   
+        else:
+            return None
+                                    
+    def rewire(self, imap: MapLike=None):
+        """
+        Rewires the topology of the block according to the mapping
+        described by the argument `imap`. The mapping happens the
+        following way:
+        
+        topology_new[old_index] = imap[topology_old[old_index]] 
+        
+        Parameters
+        ----------
+        imap : MapLike
+            Mapping from old to new node indices.
+                
+        """
+        topo = rewire(self.topology().to_array(), imap)
+        self._wrapped['nodes'] = topo
     
     
 class PolyCell1d(PolyCell):

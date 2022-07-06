@@ -118,6 +118,7 @@ extensions = [
     'sphinx_gallery.load_style',  # load CSS for gallery (needs SG >= 0.6)
 
     # 'sphinx.ext.coverage',
+    "pyvista.ext.plot_directive",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

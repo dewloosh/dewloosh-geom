@@ -6,6 +6,7 @@ from .frame import CartesianFrame
 
 
 class Point(Vector):
+    """This is a title"""
     
     _frame_cls_ = CartesianFrame
     

@@ -26,6 +26,12 @@ try:
     __hasplotly__ = True
 except Exception:
     __hasplotly__ = False
+    
+try:
+    import networkx as nx
+    __hasnx__ = True
+except Exception:
+    __hasnx__ = False
 
 
 def set_config_file(filepath):

@@ -2,40 +2,42 @@
 import numpy as np
 from numpy import ndarray
 from numba import njit, prange
-from typing import Union, Dict, List, Tuple
+from typing import MutableMapping, Union, Dict, List, Tuple
 from awkward import Array as akarray
 from scipy.sparse import csr_matrix as csr_scipy
 
-from dewloosh.math.linalg.sparse import csr_matrix
-from dewloosh.math.linalg.sparse.jaggedarray import JaggedArray
+from dewloosh.math.linalg.sparse import csr_matrix, JaggedArray
 from dewloosh.math.arraysetops import unique2d
 from dewloosh.math.array import count_cols
 
+from .. space import PointCloud
 from ..utils import explode_mesh_bulk
+from ..config import __hasnx__
 
-try:
+
+if __hasnx__:
     import networkx as nx
-    __hasnx__ = True
-except Exception:
-    __hasnx__ = False
 
 
 __all__ = ['is_regular', 'regularize', 'count_cells_at_nodes', 'cells_at_nodes',
-           'nodal_adjacency', 'unique_topo_data', 'remap_topo', 'detach_mesh_bulk']
+           'nodal_adjacency', 'unique_topo_data', 'remap_topo', 'detach_mesh_bulk',
+           'rewire', 'detach']
 
 
 __cache = True
-TopoLike = Union[ndarray, JaggedArray]
+CoordsLike = Union[ndarray, PointCloud]
+TopoLike = Union[ndarray, JaggedArray, akarray]
+MappingLike = Union[ndarray, MutableMapping]
 DoL = Dict[int, List[int]]
 
 
 def flatten_line_mesh(coords: ndarray, topo: ndarray):
     raise NotImplementedError
     count = count_cells_at_nodes(topo)
-    mess = np.where(count<1)[0]
-    leafs = np.where(count==1)[0]
-    forks = np.where(count>2)[0]
-    inters = np.where(count==2)[0]
+    mess = np.where(count < 1)[0]
+    leafs = np.where(count == 1)[0]
+    forks = np.where(count > 2)[0]
+    inters = np.where(count == 2)[0]
     nP, _ = coords.shape
     nE, nNE = topo.shape
     if nP == nE * nNE:
@@ -48,18 +50,75 @@ def flatten_line_mesh(coords: ndarray, topo: ndarray):
     return coords, order
 
 
+def rewire(topo: TopoLike, imap: MappingLike, invert=False):
+    """
+    Returns a new topology array. The argument 'imap' may be
+    a dictionary or an array, that contains new indices for
+    the indices in the old topology array.
+
+    Parameters
+    ----------
+    topo : numpy.ndarray array or JaggedArray
+        1d or 2d integer array representing topological data of a mesh.
+
+    imap : MappingLike
+        Inverse mapping on the index sets from global to local.   
+
+    invert : bool, Optional
+        If `True` the argument `imap` describes a local to global
+        mapping and an inversion takes place. In this case, 
+        `imap` must be a `numpy` array. Default is False.
+
+    Returns
+    -------
+    TopoLike
+        The same topology with the new numbering.
+
+    """
+    if invert:
+        assert isinstance(imap, ndarray)
+        imap = inds_to_invmap_as_dict(imap)
+    if isinstance(topo, ndarray):
+        if len(topo.shape) == 2:
+            return remap_topo(topo, imap)
+        elif len(topo.shape) == 1:
+            return remap_topo_1d(topo, imap)
+    elif hasattr(topo, '__array_function__'):
+        cuts, topo1d = topo.flatten(return_cuts=True)
+        topo1d = remap_topo_1d(topo1d, imap)
+        return JaggedArray(topo1d, cuts=cuts)
+    else:
+        raise TypeError("Invalid topology with type <{}>".format(type(topo)))
+
+
 @njit(nogil=True, parallel=True, cache=__cache)
 def remap_topo(topo: ndarray, imap):
     """
     Returns a new topology array. The argument 'imap' may be
     a dictionary or an array, that contains new indices for
     the indices in the old topology array.
+
     """
     nE, nNE = topo.shape
     res = np.zeros_like(topo)
     for iE in prange(nE):
         for jNE in prange(nNE):
             res[iE, jNE] = imap[topo[iE, jNE]]
+    return res
+
+
+@njit(nogil=True, parallel=True, cache=__cache)
+def remap_topo_1d(topo1d: ndarray, imap):
+    """
+    Returns a new topology array. The argument 'imap' may be
+    a dictionary or an array, that contains new indices for
+    the indices in the old topology array.
+
+    """
+    N = topo1d.shape[0]
+    res = np.zeros_like(topo1d)
+    for i in prange(N):
+        res[i] = imap[topo1d[i]]
     return res
 
 
@@ -444,13 +503,83 @@ def dol_to_jagged_data(dol: DoL) -> Tuple[ndarray, ndarray]:
     return widths, data1d
 
 
+def detach(coords: CoordsLike, topo: TopoLike, inds: ndarray = None):
+    """
+    Given a topology array and the coordinate array it refers to, 
+    the function returns the coordinate array of the points involved 
+    in the topology, and a new topology array, with indices referencing 
+    the unique coordinate array.
+
+    Parameters
+    ----------
+    coords : CoordsLike
+        A 2d float array representing geometrical data of a mesh.
+        If it is a `PointCloud` instance, indices may be included
+        and parameter `inds` is obsolete.
+
+    topo : TopoLike
+        A 2d integer array (either jagged or not) representing topological 
+        data of a mesh.
+
+    inds : ndarray, Optional
+        Global indices of the coordinates, in `coords`. If provided, the
+        coordinates of node `j` of cell `i` is accessible as
+
+        ``coords[imap[topo[i, j]]``,
+
+        where `imap` is a mapping from local to global indices, and gets
+        automatically generated from `inds`.  Default is None.
+
+    Returns
+    -------
+    ndarray
+        NumPy array similar to `coords`, but possibly with less entries.
+
+    TopoLike
+        Integer array representing the topology, with a good cahnce of 
+        being jagged, depending on your input.
+
+    """
+    if isinstance(topo, ndarray):
+        if inds is None and isinstance(coords, PointCloud):
+            inds = coords.inds
+        if isinstance(inds, ndarray):
+            topo = rewire(topo, inds, True)
+        return detach_mesh_bulk(coords, topo)
+    elif hasattr(topo, '__array_function__'):
+        if inds is None and isinstance(coords, PointCloud):
+            inds = coords.inds
+        if isinstance(inds, ndarray):
+            topo = rewire(topo, inds, True)
+        return detach_mesh_jagged(coords, topo)
+    else:
+        raise TypeError("Invalid topology with type <{}>".format(type(topo)))
+
+
+def detach_mesh_jagged(coords: ndarray, topo: ndarray):
+    """
+    Given a topology array and the coordinate array it refers to, 
+    the function returns the coordinate array of the points involved 
+    in the topology, and a new topology array, with indices referencing 
+    the new coordinate array.
+
+    """
+    inds = np.unique(topo)
+    cuts, topo1d = topo.flatten(return_cuts=True)
+    imap = inds_to_invmap_as_dict(inds)
+    topo1d = remap_topo_1d(topo1d, imap)
+    topo = JaggedArray(topo1d, cuts=cuts)
+    return coords[inds, :], topo
+
+
 @njit(nogil=True, cache=__cache)
 def detach_mesh_bulk(coords: ndarray, topo: ndarray):
     """
     Given a topology array and the coordinate array it refers to, 
     the function returns the coordinate array of the points involved 
     in the topology, and a new topology array, with indices referencing 
-    the new coordinate array. 
+    the new coordinate array.
+
     """
     inds = np.unique(topo)
     return coords[inds], remap_topo(topo, inds_to_invmap_as_dict(inds))
@@ -492,6 +621,7 @@ def inds_to_invmap_as_array(inds: np.ndarray):
     -------
     numpy.ndarray
         Mapping from global to local.
+
     """
     res = np.zeros(inds.max() + 1, dtype=inds.dtype)
     for i in prange(len(inds)):
@@ -499,9 +629,10 @@ def inds_to_invmap_as_array(inds: np.ndarray):
     return res
 
 
-def nodal_adjacency(topo: TopoLike, *args, frmt=None, 
+def nodal_adjacency(topo: TopoLike, *args, frmt=None,
                     assume_regular=False, **kwargs):
-    """Returns nodal adjacency information of a mesh.
+    """
+    Returns nodal adjacency information of a mesh.
 
     Parameters
     ----------
@@ -516,10 +647,12 @@ def nodal_adjacency(topo: TopoLike, *args, frmt=None,
     assume_regular : bool
         If the topology is regular, you can gain some speed with providing
         it as `True`. Default is `False`.
-        
+
     Notes
     -----
-    A node is adjacent to itself.
+    1) You need `networkx` to be installed for most of the functionality here.
+
+    2) A node is adjacent to itself.
 
     Returns
     -------
@@ -580,43 +713,44 @@ def unique_topo_data(topo3d: TopoLike):
     numpy.ndarray
         Indices of the unique array, that can be used to 
         reconstruct `topo`. See the examples.
-        
+
     Examples
     --------
     Find unique edges of a mesh of Q4 quadrilaterals
-        
+
     >>> from dewloosh.geom.rgrid import grid
     >>> from dewloosh.geom.topo.topodata import edges_Q4
-    
+
     >>> coords, topo = grid(size=(1, 1), shape=(10, 10), eshape='Q4')
-    
+
     To get a 3d integer array listing all the edges of all quads:
-    
+
     >>> edges3d = edges_Q4(topo)
-    
+
     To find the unique edges of the mesh:
-    
+
     >>> edges, edgeIDs = unique_topo_data(edges3d)
-    
+
     Then, to reconstruct `edges3d`, we would do
-    
+
     >>> edges3d_ = np.zeros_like(edges3d)
     >>> for i in range(edgeIDs.shape[0]):
     >>>     for j in range(edgeIDs.shape[1]):
     >>>         edges3d_[i, j, :] = edges[edgeIDs[i, j]]        
     >>> assert np.all(edges3d == edges3d_)
     True
-    
+
     """
     if isinstance(topo3d, ndarray):
         nE, nD, nN = topo3d.shape
         topo3d = topo3d.reshape((nE * nD, nN))
-        topo3d = np.sort(topo3d, axis=1)  
+        topo3d = np.sort(topo3d, axis=1)
         topo3d, topoIDs = np.unique(topo3d, axis=0, return_inverse=True)
         topoIDs = topoIDs.reshape((nE, nD))
         return topo3d, topoIDs
     elif isinstance(topo3d, JaggedArray):
         raise NotImplementedError
+
 
 """
 def unique_lines(lines : np.ndarray):

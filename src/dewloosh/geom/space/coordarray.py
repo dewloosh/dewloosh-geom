@@ -49,7 +49,16 @@ def dcoords(coords, v):
 
 class PointCloud(Vector):
     """A class to support calculations related to points in Euclidean space.
-
+    
+    Parameters
+    ----------
+    frame : ndarray, Optional.
+        A numpy array representing coordinate axes of a reference frame.
+        Default is None.
+        
+    inds : ndarray, Optional.
+        An 1d integer array specifying point indices. Default is None.
+    
     Examples
     --------
     Collect the points of a simple triangulation and get the center:
@@ -132,7 +141,7 @@ class PointCloud(Vector):
         return PointCloud(arr, frame=self.frame, inds=inds)
 
     @property
-    def frame(self):
+    def frame(self) -> FrameLike:
         """
         Returns the frame the points are embedded in.
         """
@@ -158,18 +167,27 @@ class PointCloud(Vector):
             raise TypeError('Value must be a {} instance'.format(FrameLike))
 
     def x(self, target: FrameLike = None):
+        """Returns the `x` coordinates."""
         arr = self.show(target)
         return arr[:, 0] if len(self.shape) > 1 else arr[0]
 
     def y(self, target: FrameLike = None):
+        """Returns the `y` coordinates."""
         arr = self.show(target)
         return arr[:, 1] if len(self.shape) > 1 else arr[1]
 
     def z(self, target: FrameLike = None):
+        """Returns the `z` coordinates."""
         arr = self.show(target)
         return arr[:, 2] if len(self.shape) > 1 else arr[2]
 
-    def bounds(self, target: FrameLike = None):
+    def bounds(self, target: FrameLike = None) -> ndarray:
+        """
+        Returns the bounds of the pointcloud as a numpy array with
+        a shape of (N, 2), where N is 2 for 2d problems and 3 for 3d 
+        ones.
+        
+        """
         arr = self.show(target)
         dim = arr.shape[1]
         res = np.zeros((dim, 2))

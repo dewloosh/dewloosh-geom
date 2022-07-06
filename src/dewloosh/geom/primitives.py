@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import Tuple
 import numpy as np
 from numpy import ndarray
 
@@ -12,7 +13,10 @@ from .extrude import extrude_T3_TET4
 from .voxelize import voxelize_cylinder
 
 
-def circular_disk(nangles, nradii, rmin, rmax):
+__all__ = ['CircularDisk', 'Cylinder']
+
+
+def circular_disk(nangles: int, nradii: int, rmin: float, rmax: float) -> Tuple[ndarray, ndarray]:
     """
     Returns the triangulation of a circular disk.
 
@@ -37,7 +41,11 @@ def circular_disk(nangles, nradii, rmin, rmax):
 
     topology : numpy.ndarray
         Topology as a 2d integer array.
-    
+
+    Examples
+    --------
+    >>> points, triangles = circular_disk(120, 60, 5, 25) 
+
     """
     radii = np.linspace(rmin, rmax, nradii)
     angles = np.linspace(0, 2 * np.pi, nangles, endpoint=False)
@@ -59,28 +67,18 @@ def circular_disk(nangles, nradii, rmin, rmax):
     return points, triangles
 
 
-def CircularDisk(*args, **kwargs):
+def CircularDisk(*args, **kwargs) -> TriMesh:
     """
     Returns the triangulation of a circular disk as a TriMesh object.
 
     Parameters
     ----------
-    nangles : int
-        Number of subdivisions in radial direction.
-
-    nradii : int
-        Number of subdivisions in circumferential direction.
-
-    rmin : float
-        Inner radius. Can be zero.
-
-    rmax : float
-        Outer radius.
+    See the docs of `circular_disk` for the parameters.
 
     Returns
     -------
     mesh : TriMesh
-    
+
     """
     points, triangles = circular_disk(*args, **kwargs)
     return TriMesh(points=points, triangles=triangles, celltype=T3)

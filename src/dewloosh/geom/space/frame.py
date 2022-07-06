@@ -195,25 +195,3 @@ class CartesianFrame(ReferenceFrame):
         self._array = self.show(parent)
         self.parent = parent
         return self
-
-
-if __name__ == '__main__':
-
-    A = CartesianFrame()
-    B = A.orient_new('Body', [0, 0, 45*np.pi/180],  'XYZ')
-    print(B.origo())
-    B.move(Vector([1, 0, 0], frame=B))
-    print(B.origo(A))
-    print(B.origo(B))
-    print(B.origo())
-    B.move(-Vector([np.sqrt(2)/2, 0, 0]))
-    print(B.origo(A))
-    B.move(-Vector([0, np.sqrt(2)/2, 0]))
-    print(B.origo(A))
-    C = B.fork().rotate('Body', [0, 0, 45*np.pi/180],
-                        'XYZ').move(-Vector([0, np.sqrt(2)/2, 0]))
-    
-    # 
-    A = CartesianFrame()
-    v = Vector([1., 0., 0.], frame=A)
-    B = A.fork('Body', [0, 0, 45*np.pi/180], 'XYZ').move(v)

@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-from dewloosh.geom.polyhedron import HexaHedron
-from dewloosh.math.numint import GaussPoints as Gauss
-from dewloosh.geom.utils import cells_coords
 from numba import njit, prange
 import numpy as np
 from numpy import ndarray
+
+from dewloosh.math.numint import GaussPoints as Gauss
+
+from ..polyhedron import HexaHedron
+from ..utils import cells_coords
+
 __cache = True
 
 

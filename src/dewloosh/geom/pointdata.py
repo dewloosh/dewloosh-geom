@@ -5,12 +5,13 @@ from dewloosh.math.linalg import ReferenceFrame as FrameLike
 from dewloosh.math.array import isboolarray
 
 from .space import CartesianFrame, PointCloud
-from .akwrap import AkWrapper as Wrapper
+from .akwrap import AkWrapper
 
 def gen_frame(coords): return CartesianFrame(dim=coords.shape[1])
 
 
-class PointData(Wrapper):
+class PointData(AkWrapper):
+    """This is a class"""
 
     _point_cls_ = PointCloud
 

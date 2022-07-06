@@ -61,7 +61,3 @@ def tile2d(coords: array, topo: array, shape: tuple, tol=1e-8):
 
     # renumber and return detached mesh
     return detach_mesh(coords_new, remap_topo(topo_new, imap))
-
-
-if __name__ == '__main__':
-    pass

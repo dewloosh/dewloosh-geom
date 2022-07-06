@@ -5,11 +5,12 @@ from dewloosh.math.array import atleast2d
 
 from .utils import avg_cell_data, distribute_nodal_data, \
     homogenize_nodal_values
-from .akwrap import AkWrapper as Wrapper
+from .akwrap import AkWrapper
 
 
-class CellData(Wrapper):
-
+class CellData(AkWrapper):
+    """This is a class"""
+    
     def __init__(self, *args, pointdata=None, celldata=None,
                  wrap=None, topo=None, fields=None, frames=None, 
                  **kwargs):
@@ -97,3 +98,7 @@ class CellData(Wrapper):
 
     def spush(self, *args, storekey=None, **kwargs):
         return self.push(*args, store=True, storekey=storekey, **kwargs)
+    
+    @property
+    def fields(self):
+        return self._wrapped.fields
